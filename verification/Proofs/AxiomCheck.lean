@@ -7,6 +7,7 @@ import Proofs.Consistency
 import Proofs.Binding3
 import Proofs.Refactor
 import Proofs.Theorem3
+import Proofs.PinStore
 #print axioms LTLAcc.domsep
 #print axioms LTLAcc.kbelow_pos
 #print axioms LTLAcc.kbelow_lt
@@ -36,3 +37,7 @@ import Proofs.Theorem3
 #print axioms LTLAcc.extractCons
 #print axioms LTLAcc.extractCons_correct
 #print axioms LTLAcc.extractCons_nonvacuous
+#print axioms LTLAcc.pinAccept_monotone
+#print axioms LTLAcc.pin_prefix_correct
+#print axioms LTLAcc.fork_distinct
+#print axioms LTLAcc.pin_prefix_nonvacuous
