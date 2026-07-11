@@ -10,7 +10,7 @@ namespace LTLAcc
 
 /-- `Path` (paper §5.3): the operator's inclusion path for index `m`.
     Sibling subtree heads, leaf-to-root order (the paper's `‖ [s]`). -/
-noncomputable def Path (m : Nat) (D : List Bytes) : List Bytes :=
+noncomputable def Path (m : Nat) (D : List Bytes) : List Hash :=
   if D.length ≤ 1 then []
   else
     let k := kbelow D.length
@@ -76,39 +76,37 @@ theorem MTH_split (D : List Bytes) (h : 2 ≤ D.length) :
   have h1 : ¬ D.length = 1 := by omega
   simp only [h0, h1, dite_false]
 
-theorem Root_one (v : Bytes) (m : Nat) : Root v m 1 [] = some v := by
-  rw [Root]; rfl
+theorem Root_one (v : Hash) (m : Nat) : Root v m 1 [] = some v := by
+  rw [Root]; simp
+
+theorem Root_one_cons (v : Hash) (m : Nat) (p : Hash) (q : List Hash) :
+    Root v m 1 (p :: q) = none := by
+  rw [Root]; simp
 
 /-- `Root` at a composite size, left branch (`m < k`). -/
-theorem Root_left (v : Bytes) (m n : Nat) (P : List Bytes) (s : Bytes)
+theorem Root_left (v : Hash) (m n : Nat) (P : List Hash) (s : Hash)
     (hn : 2 ≤ n) (hm : m < kbelow n) :
     Root v m n (P ++ [s]) = (Root v m (kbelow n) P).map (hnode · s) := by
   have h1 : ¬ n = 1 := by omega
   have h0 : ¬ n = 0 := by omega
-  have hne : ¬ (P ++ [s] = []) := by simp
   cases hR : Root v m (kbelow n) P with
   | none =>
       rw [Root]; simp [h0, h1, hm, hR]
-      exact fun hh => absurd hh hne
   | some x =>
       rw [Root]; simp [h0, h1, hm, hR]
-      exact fun hh => absurd hh hne
 
 /-- `Root` at a composite size, right branch (`m ≥ k`). -/
-theorem Root_right (v : Bytes) (m n : Nat) (P : List Bytes) (s : Bytes)
+theorem Root_right (v : Hash) (m n : Nat) (P : List Hash) (s : Hash)
     (hn : 2 ≤ n) (hm : ¬ m < kbelow n) :
     Root v m n (P ++ [s]) =
       (Root v (m - kbelow n) (n - kbelow n) P).map (hnode s ·) := by
   have h1 : ¬ n = 1 := by omega
   have h0 : ¬ n = 0 := by omega
-  have hne : ¬ (P ++ [s] = []) := by simp
   cases hR : Root v (m - kbelow n) (n - kbelow n) P with
   | none =>
       rw [Root]; simp [h0, h1, hm, hR]
-      exact fun hh => absurd hh hne
   | some x =>
       rw [Root]; simp [h0, h1, hm, hR]
-      exact fun hh => absurd hh hne
 
 /-! ### Theorem 1 -/
 

@@ -12,8 +12,8 @@ the same discipline as the four `*-ed25519-verified` subject corpora.
 | L1 | bytes, hleaf/hnode, domain separation (Lemma 1) | **done** (domsep: axiom-free) |
 | L2 | MTH, Root, ConsRec definitions + termination | **done** (cones: propext, LTLAcc.sha256, Quot.sound) |
 | L3 | inclusion completeness (Theorem 1) | **done** (incl_complete: propext, Classical.choice, LTLAcc.sha256, Quot.sound) |
-| L4 | frontier hash-fold + root binding (Lemma 2) | pending |
-| L5 | inclusion/consistency soundness as collision extractors (Theorems 2, 3) | pending |
+| L4 | root binding for inclusion (Lemma 2, Path instance) | **done** (root_binding; boundary = single sha256 axiom) |
+| L5 | inclusion soundness = collision extractor (Theorem 2) **done**; consistency (Theorem 3) pending |
 | L6 | pin-store state machine safety (Proposition 1) | pending |
 
 ## Discipline (identical to the subject corpora)

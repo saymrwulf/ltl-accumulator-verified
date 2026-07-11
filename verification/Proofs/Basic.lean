@@ -11,10 +11,22 @@ namespace LTLAcc
 abbrev Bytes := List UInt8
 
 /-- Leaf hash: `H(0x00 ‖ d)` (paper §5.3). -/
-noncomputable def hleaf (d : Bytes) : Bytes := sha256 (0x00 :: d)
+noncomputable def hleaf (d : Bytes) : Hash := sha256 (0x00 :: d)
 
-/-- Node hash: `H(0x01 ‖ x ‖ y)` (paper §5.3). -/
-noncomputable def hnode (x y : Bytes) : Bytes := sha256 (0x01 :: (x ++ y))
+/-- Node hash: `H(0x01 ‖ x ‖ y)` (paper §5.3). Arguments are 32-byte
+    hash values, so the preimage determines the argument pair — the
+    load-bearing width fact of the paper's Lemma 2. -/
+noncomputable def hnode (x y : Hash) : Hash := sha256 (0x01 :: (x.val ++ y.val))
+
+/-- Preimage-level pair injectivity: equal `hnode` PREIMAGES force equal
+    argument pairs, because both components are exactly 32 bytes. -/
+theorem hnode_preimage_inj {x y X Y : Hash}
+    (h : (0x01 : UInt8) :: (x.val ++ y.val) = 0x01 :: (X.val ++ Y.val)) :
+    x = X ∧ y = Y := by
+  injection h with _ happ
+  have hlen : x.val.length = X.val.length := by rw [x.property, X.property]
+  have := List.append_inj happ hlen
+  exact ⟨Subtype.ext this.1, Subtype.ext this.2⟩
 
 /-- **Lemma 1 (Domain separation), preimage form**: no leaf preimage
     equals a node preimage as a byte string — the first byte differs. -/
@@ -74,7 +86,7 @@ theorem kbelow_pow2 (n : Nat) : ∃ j, kbelow n = 2 ^ j := by
 /-- `MTH` (paper §5.3): the RFC 9162 tree head over a leaf-data list.
     `MTH [] = H(ε)`, `MTH [d] = hleaf d`, and for `n ≥ 2` the split at
     `k = kbelow n`. -/
-noncomputable def MTH (D : List Bytes) : Bytes :=
+noncomputable def MTH (D : List Bytes) : Hash :=
   if _h0 : D.length = 0 then sha256 []
   else if _h1 : D.length = 1 then hleaf (D.headD [])
   else
@@ -95,11 +107,9 @@ decreasing_by
 
 /-- `Root` (paper §5.3 / Appendix B): the consumer's root reconstruction.
     `none` = rejection on any length mismatch, exactly as deployed. -/
-noncomputable def Root (v : Bytes) (m n : Nat) (P : List Bytes) : Option Bytes :=
+noncomputable def Root (v : Hash) (m n : Nat) (P : List Hash) : Option Hash :=
   if n = 1 then
-    match P with
-    | [] => some v
-    | _ => none
+    (if P = [] then some v else none)
   else if n = 0 then none
   else
     match P.getLast? with
@@ -125,8 +135,8 @@ decreasing_by
     the reconstructed pair (old root, new root); `none` = shape
     mismatch. The flag `b` records whether the size-`n₀` subtree root is
     carried implicitly (the pinned root `r`) or explicitly in `C`. -/
-noncomputable def ConsRec (n₀ n : Nat) (C : List Bytes) (b : Bool) (r : Bytes) :
-    Option (Bytes × Bytes) :=
+noncomputable def ConsRec (n₀ n : Nat) (C : List Hash) (b : Bool) (r : Hash) :
+    Option (Hash × Hash) :=
   if n₀ = n then
     if b then
       match C with
@@ -159,7 +169,7 @@ decreasing_by
 
 /-- The consumer's acceptance predicate for a consistency proof between
     pinned head `(n₀, r₀)` and offered head `(n₁, r₁)` (paper §5.3). -/
-def acceptCons (n₀ n₁ : Nat) (r₀ r₁ : Bytes) (C : List Bytes) : Prop :=
+def acceptCons (n₀ n₁ : Nat) (r₀ r₁ : Hash) (C : List Hash) : Prop :=
   n₀ = 0 ∨ ConsRec n₀ n₁ C true r₀ = some (r₀, r₁)
 
 end LTLAcc
