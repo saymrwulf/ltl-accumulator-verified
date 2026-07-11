@@ -14,7 +14,8 @@ the same discipline as the four `*-ed25519-verified` subject corpora.
 | L3 | inclusion completeness (Theorem 1) | **done** (incl_complete: propext, Classical.choice, LTLAcc.sha256, Quot.sound) |
 | L4 | frontier binding content (Lemma 2) | **inlined in the extractor walk** (extractIncl); standalone receipt-uniqueness theorem queued for S4 restoration in extractor form |
 | L5 | inclusion soundness = EXPLICIT extractor `extractIncl` (Theorem 2) **done, non-vacuous** |
-| L6a | descent extractor `extractMTH` (Theorem 3 step 3; restored receipt-uniqueness of Lemma 2) **done, non-vacuous** |
+| L6a | descent extractor `extractMTH` (Theorem 3 step 3 = Lemma 2, WHOLE-TREE instance) **done, non-vacuous** |
+| — | Lemma 2, PATH instance (receipt-uniqueness of `Root`): deleted with the vacuous `root_binding` in S3.5 and **not yet restored**; optional, not needed for Theorem 3 |
 | L6b | ConsRec binding + Theorem 3 assembly (extractCons) | pending (S5) |
 | L6 | pin-store state machine safety (Proposition 1) | pending |
 
