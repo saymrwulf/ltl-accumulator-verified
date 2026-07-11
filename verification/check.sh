@@ -36,6 +36,7 @@ declare -A CONES=(
   [LTLAcc.IsCollision]="LTLAcc.sha256"
   [LTLAcc.extractIncl]="propext, LTLAcc.sha256, Quot.sound"
   [LTLAcc.extractIncl_correct]="propext, Classical.choice, LTLAcc.sha256, Quot.sound"
+  [LTLAcc.extractIncl_nonvacuous]="propext, LTLAcc.sha256, Quot.sound"
 )
 
 free -m | awk '/Mem:/{if($7<2048){print "FATAL: <2GB RAM available — refusing to compile"; exit 1}}'

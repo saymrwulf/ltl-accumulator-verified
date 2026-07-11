@@ -16,3 +16,4 @@ import Proofs.Extract
 #print axioms LTLAcc.IsCollision
 #print axioms LTLAcc.extractIncl
 #print axioms LTLAcc.extractIncl_correct
+#print axioms LTLAcc.extractIncl_nonvacuous

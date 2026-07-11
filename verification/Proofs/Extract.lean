@@ -194,4 +194,18 @@ theorem extractIncl_correct (m : Nat) (D : List Bytes) :
                   exact hpair ⟨Subtype.ext hs, Subtype.ext hx⟩
                 · exact hh
 
+/-- **Permanent non-vacuity witness** (re-audit F1): on a NON-forgery
+    input (the offered leaf IS the honest leaf), the extractor's output
+    is provably NOT a collision. Hence `extractIncl_correct`'s conclusion
+    is false for some inputs — it cannot be discharged by pigeonhole or
+    choice, and only the forgery hypotheses make it hold. This theorem
+    guards the corpus against any future drift back into vacuity. -/
+theorem extractIncl_nonvacuous :
+    ¬ IsCollision (extractIncl 0 [([7] : List UInt8)] [7] []).1
+                  (extractIncl 0 [([7] : List UInt8)] [7] []).2 := by
+  rw [extractIncl]
+  simp only [List.length_singleton, if_pos (by omega : (1:Nat) ≤ 1)]
+  intro hcol
+  exact hcol.1 rfl
+
 end LTLAcc
