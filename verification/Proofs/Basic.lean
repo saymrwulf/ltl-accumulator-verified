@@ -139,13 +139,9 @@ noncomputable def ConsRec (n₀ n : Nat) (C : List Hash) (b : Bool) (r : Hash) :
     Option (Hash × Hash) :=
   if n₀ = n then
     if b then
-      match C with
-      | [] => some (r, r)
-      | _ => none
+      (if C = [] then some (r, r) else none)
     else
-      match C with
-      | [s] => some (s, s)
-      | _ => none
+      (if C.length = 1 then some (C.getLastD default, C.getLastD default) else none)
   else if n₀ > n ∨ n₀ = 0 ∨ n ≤ 1 then none
   else
     match C.getLast? with

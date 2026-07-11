@@ -4,6 +4,7 @@ import Proofs.Completeness
 import Proofs.Extract
 import Proofs.Descent
 import Proofs.Consistency
+import Proofs.Binding3
 #print axioms LTLAcc.domsep
 #print axioms LTLAcc.kbelow_pos
 #print axioms LTLAcc.kbelow_lt
@@ -26,3 +27,5 @@ import Proofs.Consistency
 #print axioms LTLAcc.take_take_le
 #print axioms LTLAcc.take_drop_prefix
 #print axioms LTLAcc.extractConsNode
+#print axioms LTLAcc.take_all
+#print axioms LTLAcc.consRecBinding
