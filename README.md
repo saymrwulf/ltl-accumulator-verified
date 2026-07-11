@@ -10,7 +10,9 @@ the same discipline as the four `*-ed25519-verified` subject corpora.
 All paper-§10 mechanization targets are kernel-checked; the audit surface
 is defined and green (`verification/check.sh`, exit 0). See
 [STATEMENT-MAP.md](STATEMENT-MAP.md) for the paper↔Lean review surface and
-[KNOWN-GAPS.md](KNOWN-GAPS.md) for the honest scope ledger. No changes
+[KNOWN-GAPS.md](KNOWN-GAPS.md) for the honest scope ledger. Revised after review round 1 (GPT-5.6 + second Claude): audit surface
+now fail-closed enforced, acceptIncl named, fidelity families extended
+(230,271 / 230,016), docs reconciled. No changes
 until the external review round (second model instance + GPT + author)
 completes. The finished certificates' attestation into the LTL is a
 separate, explicitly-authorized operator decision.
@@ -24,7 +26,7 @@ separate, explicitly-authorized operator decision.
 | L5 | inclusion soundness = EXPLICIT extractor `extractIncl` (Theorem 2) **done, non-vacuous** |
 | L6a | descent extractor `extractMTH` (Theorem 3 step 3 = Lemma 2, WHOLE-TREE instance) **done, non-vacuous** |
 | — | Lemma 2, PATH instance (receipt-uniqueness of `Root`): deleted with the vacuous `root_binding` in S3.5 and **not yet restored**; optional, not needed for Theorem 3 |
-| L6b | ConsRec binding + Theorem 3 assembly (extractCons) | in progress (S5): stage-1 arithmetic/list infrastructure done (kbelow_prefix_eq, take surgery); stage-1 infra + extractConsNode extractor DEFINED (faithful to ConsRec by inspection — NOT yet machine-checked); **consRecBinding PROVEN** (Theorem 3 steps 1-2, kernel-checked, no sorry); extractCons assembly (step 3 join) = S5.4 |
+| L6b | **Theorem 3 (consistency soundness) DONE** — consRecBinding (steps 1-2) is the kernel-checked link between ConsRec acceptance and extractConsNode's output; extractCons/extractCons_correct (assembly, joins extractMTH); non-vacuity pinned |
 | L6 | pin-store state machine safety (Proposition 1) | pending |
 
 ## Discipline (identical to the subject corpora)

@@ -181,4 +181,10 @@ theorem eq_dropLast_append_of_getLast? (l : List Hash) (s : Hash)
             _ = a :: ((b :: u).dropLast ++ [s]) := by rw [← this]
             _ = (a :: b :: u).dropLast ++ [s] := by simp
 
+/-- Completeness through the named acceptance predicate (review F1): the
+    honest receipt satisfies `acceptIncl`. -/
+theorem acceptIncl_complete (m : Nat) (D : List Bytes) (hm : m < D.length) :
+    acceptIncl (D.getD m []) m D.length (Path m D) (MTH D) :=
+  ⟨hm, incl_complete m D hm⟩
+
 end LTLAcc

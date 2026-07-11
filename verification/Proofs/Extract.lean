@@ -208,4 +208,13 @@ theorem extractIncl_nonvacuous :
   intro hcol
   exact hcol.1 rfl
 
+/-- Inclusion soundness through the named acceptance predicate (review F1):
+    if `acceptIncl` holds for a wrong leaf, `extractIncl` outputs a
+    collision. Ties the object the harness tests to the security theorem. -/
+theorem acceptIncl_sound (m : Nat) (D : List Bytes) (hm : m < D.length)
+    (d : Bytes) (P : List Hash) (hd : d ≠ D.getD m [])
+    (hacc : acceptIncl d m D.length P (MTH D)) :
+    IsCollision (extractIncl m D d P).1 (extractIncl m D d P).2 :=
+  extractIncl_correct m D d P hm hd hacc.2
+
 end LTLAcc

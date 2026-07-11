@@ -10,10 +10,18 @@ list is COMPLETE, not merely that the items are acceptable.
    Matches the paper (its Theorem 1 is inclusion-only); honest
    consistency behavior is covered by the fidelity harness's honest
    cases (164,224-case agreement with the deployed verifier).
-3. **Lemma 2, path instance not restored** — receipt-uniqueness for
-   `Root` (an accepting `(v,P)` is the honest receipt) was removed with
-   the vacuous `root_binding` and not re-proven in extractor form.
-   Optional: unused by Theorems 2–3 as assembled.
+3. **Lemma 2 is mechanized as specializations, not as one general
+   theorem.** The paper's Lemma 2 is a single statement quantified over
+   an abstract hash-fold `F` and a connected subtree `S`. The corpus has
+   no hash-fold datatype/predicate; it proves the needed instances
+   directly — whole-tree (`extractMTH_correct`), ConsRec
+   (`consRecBinding`), inclusion (`extractIncl_correct`), and the width
+   fact (`hnode_preimage_inj`). These suffice for Theorems 2–3. Two
+   consequences: (a) the abstract lemma itself is not a mechanized
+   object; (b) the path-instance receipt-uniqueness for `Root` (removed
+   with the vacuous `root_binding`) is not restored — optional, unused.
+   Any paper claim that "Lemma 2 is mechanized" must read "its
+   specializations sufficient for Theorems 2–3 are mechanized." 
 4. **Signature layer abstract** — Ed25519 EUF-CMA, the poison/evidence
    retention state, and transferability of fork evidence (paper Prop
    1(2)) are not modeled; `fork_distinct` is the Merkle-layer share only.
@@ -33,3 +41,20 @@ list is COMPLETE, not merely that the items are acceptable.
    code. No theorem was affected (kernel-checked throughout); pins were
    corrected, the audit surface defined, and the standing rule is now:
    exit code + ALL GREEN, cones read from #print axioms only.
+
+9. **Asymptotic cost not mechanized.** Paper Theorems 2 and 3 assert the
+   extractors run in `O(n)` / `O(n₁)` hash evaluations. The mechanization
+   proves functional correctness of the named extractors only — no cost
+   semantics, recurrence, or computability-after-hash-instantiation. (The
+   extractors are `noncomputable` over the opaque `sha256`.)
+10. **Pin-store initialization from the empty pin not modeled**, and
+   `pin_prefix_correct` assumes `0 < n`. Trust-on-first-use / the size-0
+   initial state is a separate operation; the theorems cover transitions
+   from a positive-size pin. (Related to gap 7's per-step scoping.)
+11. **acceptIncl now named (was review F1).** The consumer's inclusion
+   acceptance `m < n ∧ Root … = some r` is now the Lean object
+   `acceptIncl`, with `acceptIncl_complete`/`acceptIncl_sound` routing
+   completeness/soundness through it, and the fidelity harness exercises
+   the out-of-range families (`m ≥ n`). `Root` alone still accepts
+   out-of-range `m`; that is by design (it is the reconstruction, not the
+   accept predicate).

@@ -4,9 +4,13 @@
 Differential-tests the LEAN definitions (transliterated in lean_defs.py:
 MTH / Path / Root / ConsRec, post-refactor decidable-if base) against the
 DEPLOYED pacta verifiers, over the EXACT case generation of the paper's
-tests/test_paper_verifiers.py — so the pinned counts (164,479 / 164,224)
-carry over and this run establishes, by exhaustive testing, that the
-mechanized objects agree with the deployed RFC 9162 code.
+tests/test_paper_verifiers.py — this run establishes agreement between the mechanized objects and the
+deployed RFC 9162 code EXHAUSTIVELY OVER all size/index (and old/new
+size) pairs through 256 FOR the two fixed generated datasets and the
+listed mutation classes (honest, wrong-leaf, wrong-index, wrong-root,
+truncated/padded proof, and out-of-range m≥n / n0>n1 / n0=0). It is not
+a proof of extensional equality over all inputs; the Lean-to-Python
+bridge remains trusted quoted-source inspection (see KNOWN-GAPS).
 
 Requires the pacta repo on PYTHONPATH (its src/). Bound NMAX matches the
 paper.
@@ -56,6 +60,8 @@ def inclusion():
                 (data[m] + b"!", m, n, P, root),
                 (data[m], (m + 1) % n, n, P, root),
                 (data[m], m, n, P, _h(b"q")),
+                (data[m], n, n, P, root),        # out-of-range m = n (review F1)
+                (data[m], n + 3, n, P, root),    # out-of-range m > n (review F1)
             ]
             if P:
                 cases.append((data[m], m, n, P[:-1], root))
@@ -81,6 +87,8 @@ def consistency():
                 (m, n, _h(b"x"), r1, P),
                 (m, n, r0, _h(b"y"), P),
                 (m, n, r0, r1, P + [_h(b"z")]),
+                (n + 1, n, r1, r0, P),           # n0 > n1 (review F1)
+                (0, n, r0, r1, P),               # n0 = 0 escape (review F1)
             ]
             if P:
                 cases.append((m, n, r0, r1, P[:-1]))
@@ -99,9 +107,9 @@ def main():
     tc = consistency()
     print(f"  consistency: {tc} verifier cases (incl. honest), MTH checks  — all agree")
     # pinned counts (identical generation to the paper's harness)
-    assert ti == 164_479, ti
-    assert tc == 164_224, tc
-    print(f"  PINNED: inclusion={ti} (164,479)  consistency={tc} (164,224)")
+    assert ti == 230_271, ti   # re-pinned after adding out-of-range families (F1)
+    assert tc == 230_016, tc
+    print(f"  PINNED: inclusion={ti} (230,271)  consistency={tc} (230,016)")
     print("=== FIDELITY GREEN: mechanized defs agree with deployed verifier ===")
 
 

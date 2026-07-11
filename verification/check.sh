@@ -80,7 +80,17 @@ declare -A CONES=(
   [LTLAcc.eq_dropLast_append_of_getLast?]="propext"
   [LTLAcc.instInhabitedHash]="propext"
   [LTLAcc.instDecidableEqHash]=""
+  [LTLAcc.Hash]=""
+  [LTLAcc.acceptIncl]="propext, LTLAcc.sha256, Quot.sound"
+  [LTLAcc.acceptIncl_complete]="propext, Classical.choice, LTLAcc.sha256, Quot.sound"
+  [LTLAcc.acceptIncl_sound]="propext, Classical.choice, LTLAcc.sha256, Quot.sound"
+  [LTLAcc.extractCons_correct_paper]="propext, Classical.choice, LTLAcc.sha256, Quot.sound"
 )
+
+# Sanctioned exclusions from the cone audit (documented, not silent):
+#   sha256 = THE boundary axiom (it IS the assumption)
+#   Bytes  = bare type alias (abbrev), no cone content
+declare -A EXCLUDE=( [sha256]=1 [Bytes]=1 )
 
 free -m | awk '/Mem:/{if($7<2048){print "FATAL: <2GB RAM available — refusing to compile"; exit 1}}'
 echo "=== Phase 0: source integrity ==="
@@ -91,6 +101,10 @@ for f in "$HERE"/gen/LTLAcc/*.lean "$HERE"/Proofs/*.lean; do
   fi
 done
 echo "  all sources valid"
+for o in "$HERE"/Proofs/*.olean; do
+  [ -f "$o" ] || continue
+  [ -f "${o%.olean}.lean" ] || { echo "ORPHAN OLEAN: $o has no sibling .lean (stale artifact)"; exit 1; }
+done
 
 echo "=== Phase 1: stub + axiom-smuggling audit ==="
 if grep -rn 'by trivial' "$HERE"/Proofs/*.lean 2>/dev/null; then
@@ -152,16 +166,50 @@ for cert in "${!CONES[@]}"; do
   fi
 done
 rm -f "$AUD"
+
+# -- Phase 3b: audit-surface COVERAGE (fail-closed; review H1) --------------
+echo "=== Phase 3b: audit-surface coverage ==="
+COVFAIL=0
+DECLS=$(grep -hoE "^(theorem|noncomputable def|def|abbrev) [A-Za-z0-9_?]+" \
+          "$HERE"/Proofs/*.lean "$HERE"/gen/LTLAcc/*.lean | awk '{print $NF}' | sort -u)
+for d in $DECLS; do
+  if [ -n "${CONES[LTLAcc.$d]+x}" ] || [ -n "${EXCLUDE[$d]+x}" ]; then :; else
+    echo "  UNCLASSIFIED DECLARATION: $d (not in CONES, not a sanctioned exclusion)"; COVFAIL=1
+  fi
+done
+# anonymous instances live only in gen/ (a controlled file); pin their count
+GENINST=$(grep -cE "^instance" "$HERE"/gen/LTLAcc/*.lean)
+CONEINST=$(printf '%s\n' "${!CONES[@]}" | grep -cE "LTLAcc\.inst")
+if [ "$GENINST" != "$CONEINST" ]; then
+  echo "  INSTANCE COUNT DRIFT: gen has $GENINST instances, CONES pins $CONEINST"; COVFAIL=1
+fi
+# every pinned cert must actually be queried by AxiomCheck (no pin-but-never-check)
+for cert in "${!CONES[@]}"; do
+  grep -qF "#print axioms $cert" "$HERE/Proofs/AxiomCheck.lean" || {
+    echo "  PINNED BUT NOT QUERIED: $cert (in CONES, absent from AxiomCheck.lean)"; COVFAIL=1; }
+done
+[ "$COVFAIL" = 0 ] && echo "  coverage complete: every declaration classified (audited or sanctioned-excluded)"
+[ "$COVFAIL" = 0 ] || { echo "COVERAGE FAILED"; FAIL=1; }
 [ "$FAIL" = 0 ] || exit 1
 # -- Phase 4: definition fidelity (Lean defs vs deployed pacta verifiers) --
 echo "=== Phase 4: definition fidelity ==="
 PACTA_SRC="${PACTA_SRC:-$HERE/../../proof-aware-crypto-tooling-agent/src}"
+FIDELITY_RAN=0
 if [ "${SKIP_FIDELITY:-0}" = "1" ]; then
   echo "  skipped (SKIP_FIDELITY=1)"
 elif [ -d "$PACTA_SRC/pacta" ]; then
   PACTA_SRC="$PACTA_SRC" python3 "$HERE/fidelity/run_fidelity.py" || { echo "FIDELITY FAILED"; exit 1; }
+  FIDELITY_RAN=1
 else
   echo "  SKIPPED: pacta repo not found at $PACTA_SRC (set PACTA_SRC to run)"
 fi
 
-echo "=== ALL GREEN ==="
+# Fail-closed markers (review H2): the Lean corpus is green either way, but
+# only the strong marker — required by the attestation gate — is emitted
+# when fidelity actually ran. Never conflate the two.
+echo "=== LEAN GREEN ==="
+if [ "$FIDELITY_RAN" = 1 ]; then
+  echo "=== ATTESTATION GREEN (Lean + fidelity) ==="
+else
+  echo "=== FIDELITY NOT RUN — NOT attestation-ready (run with pacta present) ==="
+fi

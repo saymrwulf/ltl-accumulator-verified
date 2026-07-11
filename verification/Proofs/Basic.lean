@@ -168,4 +168,11 @@ decreasing_by
 def acceptCons (n₀ n₁ : Nat) (r₀ r₁ : Hash) (C : List Hash) : Prop :=
   n₀ = 0 ∨ ConsRec n₀ n₁ C true r₀ = some (r₀, r₁)
 
+/-- The consumer's INCLUSION acceptance predicate (paper §5.3 / Appendix B):
+    the `m < n` range guard is part of accept, not just a theorem hypothesis
+    (review F1). `Root` alone would accept out-of-range `m` at `n = 1`; this
+    is the object the fidelity harness's `accept_incl` mirrors. -/
+def acceptIncl (d : Bytes) (m n : Nat) (P : List Hash) (r : Hash) : Prop :=
+  m < n ∧ Root (hleaf d) m n P = some r
+
 end LTLAcc

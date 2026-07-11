@@ -64,4 +64,18 @@ theorem extractCons_nonvacuous :
   intro hcol
   exact hcol.1 rfl
 
+/-- Theorem 3 at the paper's exact quantifiers (review M4): `n₀ ≤ n₁`
+    without a separate `0 < n₀`. The `n₀ = 0` case is discharged: `D₀`
+    has length 0 so `D₀ = [] = D₁.take 0`, contradicting `hne`. -/
+theorem extractCons_correct_paper (n₀ : Nat) (C : List Hash) (D₀ D₁ : List Bytes)
+    (hlen0 : D₀.length = n₀) (hle : n₀ ≤ D₁.length)
+    (hne : D₀ ≠ D₁.take n₀)
+    (hacc : ConsRec n₀ D₁.length C true (MTH D₀) = some (MTH D₀, MTH D₁)) :
+    IsCollision (extractCons n₀ C D₀ D₁).1 (extractCons n₀ C D₀ D₁).2 := by
+  rcases Nat.eq_zero_or_pos n₀ with h0 | hpos
+  · exfalso; apply hne
+    have hD0 : D₀ = [] := List.length_eq_zero_iff.mp (by omega)
+    rw [hD0, h0]; simp
+  · exact extractCons_correct n₀ C D₀ D₁ hlen0 hpos hle hne hacc
+
 end LTLAcc

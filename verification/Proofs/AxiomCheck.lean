@@ -63,3 +63,8 @@ import Proofs.PinStore
 #print axioms LTLAcc.take_append_drop
 #print axioms LTLAcc.instInhabitedHash
 #print axioms LTLAcc.instDecidableEqHash
+#print axioms LTLAcc.acceptIncl
+#print axioms LTLAcc.acceptIncl_complete
+#print axioms LTLAcc.acceptIncl_sound
+#print axioms LTLAcc.extractCons_correct_paper
+#print axioms LTLAcc.Hash
