@@ -17,7 +17,7 @@ export LEAN_MEM_MB="${LEAN_MEM_MB:-4096}"
 CORES="${LEAN_MAX_CORES:-0-3}"
 
 GEN_MODULES=( LTLAcc/HashExternal )
-PROOFS=( Basic Completeness Extract Descent Consistency Binding3 )
+PROOFS=( Basic Completeness Extract Descent Consistency Binding3 Refactor )
 
 # Certificates and their exact expected cones (observed at first green
 # compile, 2026-07-10; any drift in EITHER direction is a failure).
@@ -46,6 +46,8 @@ declare -A CONES=(
   [LTLAcc.extractConsNode]="propext, LTLAcc.sha256, Quot.sound"
   [LTLAcc.take_all]="propext, Quot.sound"
   [LTLAcc.consRecBinding]="propext, Classical.choice, LTLAcc.sha256, Quot.sound"
+  [LTLAcc.consRec_base_false_eq]="propext, Quot.sound"
+  [LTLAcc.consRec_base_true_eq]="propext, Quot.sound"
 )
 
 free -m | awk '/Mem:/{if($7<2048){print "FATAL: <2GB RAM available — refusing to compile"; exit 1}}'

@@ -5,6 +5,7 @@ import Proofs.Extract
 import Proofs.Descent
 import Proofs.Consistency
 import Proofs.Binding3
+import Proofs.Refactor
 #print axioms LTLAcc.domsep
 #print axioms LTLAcc.kbelow_pos
 #print axioms LTLAcc.kbelow_lt
@@ -29,3 +30,5 @@ import Proofs.Binding3
 #print axioms LTLAcc.extractConsNode
 #print axioms LTLAcc.take_all
 #print axioms LTLAcc.consRecBinding
+#print axioms LTLAcc.consRec_base_false_eq
+#print axioms LTLAcc.consRec_base_true_eq
