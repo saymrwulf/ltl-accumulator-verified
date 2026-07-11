@@ -1,7 +1,7 @@
 /- Axiom-cone observation for the audit (Phase 3 of check.sh). -/
 import Proofs.Basic
 import Proofs.Completeness
-import Proofs.Binding
+import Proofs.Extract
 #print axioms LTLAcc.domsep
 #print axioms LTLAcc.kbelow_pos
 #print axioms LTLAcc.kbelow_lt
@@ -13,7 +13,6 @@ import Proofs.Binding
 #print axioms LTLAcc.Path
 #print axioms LTLAcc.incl_complete
 #print axioms LTLAcc.hnode_preimage_inj
-#print axioms LTLAcc.hnode_inj_or_collision
-#print axioms LTLAcc.hleaf_inj_or_collision
-#print axioms LTLAcc.root_binding
-#print axioms LTLAcc.incl_sound
+#print axioms LTLAcc.IsCollision
+#print axioms LTLAcc.extractIncl
+#print axioms LTLAcc.extractIncl_correct

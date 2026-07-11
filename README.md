@@ -13,7 +13,7 @@ the same discipline as the four `*-ed25519-verified` subject corpora.
 | L2 | MTH, Root, ConsRec definitions + termination | **done** (cones: propext, LTLAcc.sha256, Quot.sound) |
 | L3 | inclusion completeness (Theorem 1) | **done** (incl_complete: propext, Classical.choice, LTLAcc.sha256, Quot.sound) |
 | L4 | root binding for inclusion (Lemma 2, Path instance) | **done** (root_binding; boundary = single sha256 axiom) |
-| L5 | inclusion soundness = collision extractor (Theorem 2) **done**; consistency (Theorem 3) pending |
+| L5 | inclusion soundness = EXPLICIT collision extractor extractIncl+correctness (Theorem 2) **done, non-vacuous**; consistency (Theorem 3) pending |
 | L6 | pin-store state machine safety (Proposition 1) | pending |
 
 ## Discipline (identical to the subject corpora)

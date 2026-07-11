@@ -161,4 +161,24 @@ theorem incl_complete (m : Nat) (D : List Bytes) (hm : m < D.length) :
       rw [hrec, MTH_split D h2, ← hkeq]
       rfl
 
+/-- A non-empty list is its `dropLast` plus its last element
+    (self-contained; no stdlib-name dependence). -/
+theorem eq_dropLast_append_of_getLast? (l : List Hash) (s : Hash)
+    (h : l.getLast? = some s) : l = l.dropLast ++ [s] := by
+  induction l with
+  | nil => simp at h
+  | cons a t ih =>
+      cases t with
+      | nil =>
+          simp at h
+          subst h
+          rfl
+      | cons b u =>
+          have hh : (b :: u).getLast? = some s := by
+            simpa using h
+          have := ih hh
+          calc a :: b :: u = a :: (b :: u) := rfl
+            _ = a :: ((b :: u).dropLast ++ [s]) := by rw [← this]
+            _ = (a :: b :: u).dropLast ++ [s] := by simp
+
 end LTLAcc
