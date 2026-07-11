@@ -21,10 +21,11 @@ PROOFS=( Basic Completeness Extract Descent Consistency Binding3 Refactor Theore
 
 # Certificates and their exact expected cones (observed via #print axioms,
 # never guessed; any drift in EITHER direction is a failure).
-# AUDIT SURFACE: every theorem/def under Proofs/ (52) + the two load-bearing
-# gen/ instances (Inhabited/DecidableEq Hash). Excluded by nature: the
-# sanctioned axiom itself (sha256 IS the boundary) and `abbrev Bytes`
-# (a bare type alias, no cone content).
+# AUDIT SURFACE: Phase 3b pins the FULL environment of the corpus modules
+# (inventory-allowlist.txt, 218 constants incl. compiler-generated
+# auxiliaries); the 59 entries below are the human-reviewed statement
+# surface, additionally queried through #print axioms in Phase 3 and
+# cross-checked against the inventory's independently computed cones.
 declare -A CONES=(
   [LTLAcc.domsep]=""
   [LTLAcc.kbelow_pos]="propext, Quot.sound"
@@ -87,10 +88,9 @@ declare -A CONES=(
   [LTLAcc.extractCons_correct_paper]="propext, Classical.choice, LTLAcc.sha256, Quot.sound"
 )
 
-# Sanctioned exclusions from the cone audit (documented, not silent):
-#   sha256 = THE boundary axiom (it IS the assumption)
-#   Bytes  = bare type alias (abbrev), no cone content
-declare -A EXCLUDE=( [sha256]=1 [Bytes]=1 )
+# (The former EXCLUDE table is gone: since Phase 3b reads the environment,
+# sha256 and Bytes are ordinary allowlist entries — the axiom is pinned as
+# the SINGLE axiom-kind constant, the abbrev carries its empty cone.)
 
 free -m | awk '/Mem:/{if($7<2048){print "FATAL: <2GB RAM available — refusing to compile"; exit 1}}'
 echo "=== Phase 0: source integrity ==="
@@ -101,10 +101,11 @@ for f in "$HERE"/gen/LTLAcc/*.lean "$HERE"/Proofs/*.lean; do
   fi
 done
 echo "  all sources valid"
-for o in "$HERE"/Proofs/*.olean; do
-  [ -f "$o" ] || continue
+# Recursive: no compiled artifact anywhere in the tree may lack its source
+# (review round 2, GPT M1 — previously scanned Proofs/*.olean only).
+while IFS= read -r -d '' o; do
   [ -f "${o%.olean}.lean" ] || { echo "ORPHAN OLEAN: $o has no sibling .lean (stale artifact)"; exit 1; }
-done
+done < <(find "$HERE" -name '*.olean' -print0)
 
 echo "=== Phase 1: stub + axiom-smuggling audit ==="
 if grep -rn 'by trivial' "$HERE"/Proofs/*.lean 2>/dev/null; then
@@ -114,6 +115,11 @@ if grep -rn ' : True :=' "$HERE"/Proofs/*.lean 2>/dev/null; then
 if grep -rnE '^(private |protected |noncomputable )*axiom ' "$HERE"/Proofs/*.lean 2>/dev/null; then
   echo "AXIOM SMUGGLING DETECTED: axiom under Proofs/ — gen/ is the only sanctioned site."; exit 1
 fi
+# gen/ is the sanctioned site for exactly ONE axiom (review round 2, GPT M1).
+# This textual pin is the fast belt; the semantic guarantee is Phase 3b's
+# environment inventory (exactly one axiom-kind constant, LTLAcc.sha256).
+AXCOUNT=$(grep -hcE '^(private |protected |noncomputable )*axiom ' "$HERE"/gen/LTLAcc/*.lean | paste -sd+ - | bc)
+[ "$AXCOUNT" = 1 ] || { echo "AXIOM COUNT DRIFT: gen/ declares $AXCOUNT axioms, sanctioned: 1 (sha256)"; exit 1; }
 echo "  clean"
 
 echo "=== Phase 2: compile ==="
@@ -134,8 +140,14 @@ lake env bash -c "
   done
   for f in Proofs/*.lean; do
     b=\$(basename \"\$f\" .lean)
-    [ \"\$b\" = AxiomCheck ] && continue
+    [ \"\$b\" = AxiomCheck ] && continue   # audit infrastructure, compiled in Phase 3
+    [ \"\$b\" = Inventory ]  && continue   # audit infrastructure, compiled in Phase 3b
     case \" ${PROOFS[*]} \" in (*\" \$b \"*) ;; (*) echo \"DEAD FILE: \$f\"; exit 1;; esac
+  done
+  # gen/ gets the same unmanifested-source check (review round 2, GPT M1)
+  for f in gen/LTLAcc/*.lean; do
+    b=\"LTLAcc/\$(basename \"\$f\" .lean)\"
+    case \" ${GEN_MODULES[*]} \" in (*\" \$b \"*) ;; (*) echo \"DEAD FILE (gen): \$f\"; exit 1;; esac
   done
 "
 if grep -q "uses 'sorry'" "$LOG"; then echo "STUB: sorry detected"; exit 1; fi
@@ -167,28 +179,64 @@ for cert in "${!CONES[@]}"; do
 done
 rm -f "$AUD"
 
-# -- Phase 3b: audit-surface COVERAGE (fail-closed; review H1) --------------
-echo "=== Phase 3b: audit-surface coverage ==="
+# -- Phase 3b: ENVIRONMENT-derived audit-surface coverage (fail-closed) ------
+# Review round 2 (GPT H1 / Claude NEW-1): the previous source-regex
+# enumerator was evadable (attributes, indentation, private/protected,
+# instance, and namespace-nested basename collisions). Replaced entirely:
+# Proofs/Inventory.lean reads the compiled Lean ENVIRONMENT and emits every
+# constant of every corpus module — fully qualified, unfiltered, each with
+# kind and axiom cone (its own walker, cross-checked in-process against
+# core collectAxioms). inventory_gate.sh diffs that against the pinned
+# allowlist, fail-closed BOTH directions. No name shape can hide: what the
+# kernel saw is what gets audited.
+echo "=== Phase 3b: environment-derived audit-surface coverage ==="
 COVFAIL=0
-DECLS=$(grep -hoE "^(theorem|noncomputable def|def|abbrev) [A-Za-z0-9_?]+" \
-          "$HERE"/Proofs/*.lean "$HERE"/gen/LTLAcc/*.lean | awk '{print $NF}' | sort -u)
-for d in $DECLS; do
-  if [ -n "${CONES[LTLAcc.$d]+x}" ] || [ -n "${EXCLUDE[$d]+x}" ]; then :; else
-    echo "  UNCLASSIFIED DECLARATION: $d (not in CONES, not a sanctioned exclusion)"; COVFAIL=1
-  fi
+INVLOG=$(mktemp /tmp/acc-inv-XXXX.log)
+cd "$AENEAS_LEAN"
+lake env bash -c "
+  cd '$HERE' && export LEAN_PATH=\"\$LEAN_PATH:$HERE/gen:$HERE\"
+  LEAN_TIMEOUT=600 LEAN_MAX_CORES=$CORES '$HERE/lean-guard' Proofs/Inventory.lean
+" > "$INVLOG" 2>&1 || { cat "$INVLOG"; echo "INVENTORY COMPILE FAILED"; exit 1; }
+"$HERE/inventory_gate.sh" "$INVLOG" "$HERE/inventory-allowlist.txt" || COVFAIL=1
+
+# The inventory's corpus-module list must BE the compile manifest — both
+# directions, so neither can drift from the other silently.
+for m in "${GEN_MODULES[@]}" "${PROOFS[@]}"; do
+  mod=$(echo "$m" | sed 's|^LTLAcc/|LTLAcc.|; s|^\([A-Z]\)|Proofs.\1|; s|^Proofs\.LTLAcc\.|LTLAcc.|')
+  grep -qF "\`$mod" "$HERE/Proofs/Inventory.lean" || {
+    echo "  MANIFEST DRIFT: $mod compiled by check.sh but not inventoried"; COVFAIL=1; }
 done
-# anonymous instances live only in gen/ (a controlled file); pin their count
-GENINST=$(grep -cE "^instance" "$HERE"/gen/LTLAcc/*.lean)
-CONEINST=$(printf '%s\n' "${!CONES[@]}" | grep -cE "LTLAcc\.inst")
-if [ "$GENINST" != "$CONEINST" ]; then
-  echo "  INSTANCE COUNT DRIFT: gen has $GENINST instances, CONES pins $CONEINST"; COVFAIL=1
-fi
+NMANIFEST=$(( ${#GEN_MODULES[@]} + ${#PROOFS[@]} ))
+NINV=$(grep -oE '`(LTLAcc|Proofs)\.[A-Za-z0-9_.]+' "$HERE/Proofs/Inventory.lean" | wc -l)
+[ "$NMANIFEST" = "$NINV" ] || {
+  echo "  MANIFEST DRIFT: check.sh compiles $NMANIFEST modules, Inventory lists $NINV"; COVFAIL=1; }
+
+# CONES ⊆ allowlist with IDENTICAL cones: the #print-axioms-pinned table
+# and the environment inventory are two independent computations of the
+# same facts — any disagreement is a failure of one of them.
+# (cones are compared as SETS: CONES keeps #print-axioms order, the
+#  inventory emits byte-sorted order — canonicalize both before comparing)
+canon() { tr -d ' ' <<<"$1" | tr ',' '\n' | LC_ALL=C sort | paste -sd, -; }
+while IFS='|' read -r _ name _ cone; do
+  if [ -n "${CONES[$name]+x}" ]; then
+    want=$(canon "${CONES[$name]}")
+    got=$(canon "$cone")
+    [ "$want" = "$got" ] || {
+      echo "  CONE CROSS-CHECK FAILED: $name CONES=[$want] inventory=[$got]"; COVFAIL=1; }
+  fi
+done < <(grep '^INV|' "$HERE/inventory-allowlist.txt")
+for cert in "${!CONES[@]}"; do
+  grep -q "^INV|$cert|" "$HERE/inventory-allowlist.txt" || {
+    echo "  PINNED BUT NOT INVENTORIED: $cert (in CONES, not in allowlist)"; COVFAIL=1; }
+done
+rm -f "$INVLOG"
+
 # every pinned cert must actually be queried by AxiomCheck (no pin-but-never-check)
 for cert in "${!CONES[@]}"; do
   grep -qF "#print axioms $cert" "$HERE/Proofs/AxiomCheck.lean" || {
     echo "  PINNED BUT NOT QUERIED: $cert (in CONES, absent from AxiomCheck.lean)"; COVFAIL=1; }
 done
-[ "$COVFAIL" = 0 ] && echo "  coverage complete: every declaration classified (audited or sanctioned-excluded)"
+[ "$COVFAIL" = 0 ] && echo "  coverage complete: environment == allowlist, CONES cross-checked"
 [ "$COVFAIL" = 0 ] || { echo "COVERAGE FAILED"; FAIL=1; }
 [ "$FAIL" = 0 ] || exit 1
 # -- Phase 4: definition fidelity (Lean defs vs deployed pacta verifiers) --

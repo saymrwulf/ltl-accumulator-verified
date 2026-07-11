@@ -25,7 +25,7 @@ mechanization to items i–v).
 | Prop 1(1) (pin monotonicity + prefix) | `pinAccept`, `pinAccept_monotone`, `pin_prefix_correct` | PinStore | sha256 (+choice) |
 | Prop 1(2), Merkle share | `fork_distinct` (different roots ⇒ different content); transferability = signature layer, out of scope | PinStore | sha256 |
 | non-vacuity guards (anti-pigeonhole) | `extractIncl_nonvacuous`, `extractMTH_nonvacuous`, `extractCons_nonvacuous`, `pin_prefix_nonvacuous` | Extract/Descent/Theorem3/PinStore | sha256 |
-| definition fidelity vs deployed verifier | `fidelity/` harness: MTH==merkle_root, Path==inclusion_proof, verifier agreement 164,479 + 164,224 (paper's exact case set) | fidelity | (testing) |
+| definition fidelity vs deployed verifier | `fidelity/` harness: MTH==merkle_root, Path==inclusion_proof, verifier agreement 230,271 inclusion + 230,016 consistency (paper's case set + out-of-range families m≥n, n₀>n₁, n₀=0; round-2 M2 fixed the stale pre-expansion counts here) | fidelity | (testing) |
 
 Note on "assumption-free" (paper §10(i)): `incl_complete`'s cone lists
 `LTLAcc.sha256`, but the theorem assumes **no property** of it — it
@@ -37,11 +37,25 @@ Design invariant of every soundness statement: the collision is the output
 of a **named extractor function** and correctness is a claim about that
 output. A bare `∃ x y, x ≠ y ∧ sha256 x = sha256 y` is provable by
 pigeonhole alone (sha256 maps an infinite domain into the finite 32-byte
-type), so it carries no cryptographic content; the guards above prove each
-extractor's conclusion is *false* on honest inputs, hence not
-choice-dischargeable.
+type), so it carries no cryptographic content. What the guards certify
+(precisely — round-2 M3): each named extractor does **not** return a
+collision on at least one canonical honest input, which rules out the
+degeneration where the conclusion is a globally inhabited bare collision
+existential. They do NOT establish logical dependence on every listed
+hypothesis, nor that no other classical argument could reach the
+conclusion on some restricted domain.
 
 Audit surface (enforced by `verification/check.sh`, exit 0 = green):
-every theorem/def under `Proofs/` (52) plus the two load-bearing `gen/`
-instances; excluded by nature: the sanctioned axiom `sha256` (it *is* the
-boundary) and `abbrev Bytes` (alias, no cone content).
+the FULL compiled environment of the corpus modules — 218 constants,
+read from the Lean environment by `Proofs/Inventory.lean` (fully
+qualified names, kinds, axiom cones) and pinned in
+`verification/inventory-allowlist.txt`, diffed fail-closed both
+directions on every run (round-3 replacement for the round-2 source-regex
+gate, which GPT H1 showed was evadable). The 59 human-reviewed statement
+cones above are additionally checked via `#print axioms` and
+cross-checked against the inventory's independently computed cones.
+`verification/selftest_audit.sh` attacks the gate with nine injection
+cases (attributed/indented/private/instance declarations, a nested
+namespace reusing an audited basename, a smuggled axiom, a deleted
+declaration, and unmanifested Proofs/ and gen/ modules) — each must
+fail the exact production gate.

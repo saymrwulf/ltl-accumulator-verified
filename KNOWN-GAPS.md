@@ -9,7 +9,8 @@ list is COMPLETE, not merely that the items are acceptable.
 2. **No consistency-completeness theorem** (honest ConsRec acceptance).
    Matches the paper (its Theorem 1 is inclusion-only); honest
    consistency behavior is covered by the fidelity harness's honest
-   cases (164,224-case agreement with the deployed verifier).
+   cases (within the 230,016-case consistency agreement with the
+   deployed verifier).
 3. **Lemma 2 is mechanized as specializations, not as one general
    theorem.** The paper's Lemma 2 is a single statement quantified over
    an abstract hash-fold `F` and a connected subtree `S`. The corpus has
@@ -58,3 +59,21 @@ list is COMPLETE, not merely that the items are acceptable.
    the out-of-range families (`m ≥ n`). `Root` alone still accepts
    out-of-range `m`; that is by design (it is the reconstruction, not the
    accept predicate).
+12. **Audit-gate lineage** (candor; was round-2 GPT H1 / Claude NEW-1,
+   both round-1 "fail-closed" claims were overclaims). The round-2
+   coverage gate enumerated declarations with a source regex and was
+   evadable (attributes, indentation, private/protected, `instance`,
+   nested-namespace basename collisions). Round 3 replaced it with an
+   environment-derived inventory (`Proofs/Inventory.lean` +
+   `inventory-allowlist.txt`, fully-qualified names, no filtering) and
+   `selftest_audit.sh`, which runs the published evasion table plus a
+   namespace collision, an axiom smuggle, a stale-entry case, and two
+   unmanifested-module cases against the exact production gate.
+   Residual honesty: the inventory sees what the compiled environment
+   contains; it cannot see source that is never compiled (which the
+   dead-file checks cover) or defeat a hostile Lean toolchain.
+13. **Review-kit fidelity target was not self-contained in round 2**
+   (GPT H2: missing load-time imports made `run_fidelity.py` unrunnable
+   from the kit). Round 3 ships the complete stdlib-only import closure
+   of `pacta.transparency`, content-addressed against pacta commit
+   `3d81d53`, plus the clean-extraction transcript with exit code.
