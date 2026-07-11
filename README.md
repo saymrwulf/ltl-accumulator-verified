@@ -13,7 +13,9 @@ the same discipline as the four `*-ed25519-verified` subject corpora.
 | L2 | MTH, Root, ConsRec definitions + termination | **done** (cones: propext, LTLAcc.sha256, Quot.sound) |
 | L3 | inclusion completeness (Theorem 1) | **done** (incl_complete: propext, Classical.choice, LTLAcc.sha256, Quot.sound) |
 | L4 | frontier binding content (Lemma 2) | **inlined in the extractor walk** (extractIncl); standalone receipt-uniqueness theorem queued for S4 restoration in extractor form |
-| L5 | inclusion soundness = EXPLICIT collision extractor extractIncl+correctness (Theorem 2) **done, non-vacuous**; consistency (Theorem 3) pending |
+| L5 | inclusion soundness = EXPLICIT extractor `extractIncl` (Theorem 2) **done, non-vacuous** |
+| L6a | descent extractor `extractMTH` (Theorem 3 step 3; restored receipt-uniqueness of Lemma 2) **done, non-vacuous** |
+| L6b | ConsRec binding + Theorem 3 assembly (extractCons) | pending (S5) |
 | L6 | pin-store state machine safety (Proposition 1) | pending |
 
 ## Discipline (identical to the subject corpora)

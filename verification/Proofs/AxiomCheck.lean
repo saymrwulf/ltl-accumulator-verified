@@ -2,6 +2,7 @@
 import Proofs.Basic
 import Proofs.Completeness
 import Proofs.Extract
+import Proofs.Descent
 #print axioms LTLAcc.domsep
 #print axioms LTLAcc.kbelow_pos
 #print axioms LTLAcc.kbelow_lt
@@ -17,3 +18,6 @@ import Proofs.Extract
 #print axioms LTLAcc.extractIncl
 #print axioms LTLAcc.extractIncl_correct
 #print axioms LTLAcc.extractIncl_nonvacuous
+#print axioms LTLAcc.extractMTH
+#print axioms LTLAcc.extractMTH_correct
+#print axioms LTLAcc.extractMTH_nonvacuous
