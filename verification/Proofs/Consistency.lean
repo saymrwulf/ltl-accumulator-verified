@@ -64,4 +64,43 @@ theorem take_drop_prefix (l : List Bytes) (k n₀ : Nat) :
     (l.take n₀).drop k = (l.drop k).take (n₀ - k) := by
   rw [List.drop_take]
 
+/-! ### the consistency collision extractor (paper Theorem 3, steps 1-2) -/
+
+/-- Walk the `ConsRec` fold in parallel with the honest size-`n` tree of
+    `D₁`. At each level the new-root component builds `hnode` of a left and
+    a right value; compare that argument pair against the honest node
+    `hnode (MTH (D₁.take k)) (MTH (D₁.drop k))`. Return `some` concrete
+    colliding preimage pair at the first mismatch (steps 1-2 of Theorem 3),
+    or `none` if the fold is genuine all the way down — in which case the
+    binding `x = MTH (D₁.take n₀)` holds (proven in stage 3). -/
+noncomputable def extractConsNode (n₀ n : Nat) (C : List Hash) (b : Bool)
+    (r : Hash) (D₁ : List Bytes) : Option (List UInt8 × List UInt8) :=
+  if n₀ = n then none
+  else if n₀ > n ∨ n₀ = 0 ∨ n ≤ 1 then none
+  else
+    match C.getLast? with
+    | none => none
+    | some s =>
+        let k := kbelow n
+        if n₀ ≤ k then
+          let y' := ((ConsRec n₀ k C.dropLast b r).map Prod.snd).getD default
+          if y' = MTH (D₁.take k) ∧ s = MTH (D₁.drop k) then
+            extractConsNode n₀ k C.dropLast b r (D₁.take k)
+          else
+            some (0x01 :: (y'.val ++ s.val),
+                  0x01 :: ((MTH (D₁.take k)).val ++ (MTH (D₁.drop k)).val))
+        else
+          let y' := ((ConsRec (n₀ - k) (n - k) C.dropLast false r).map Prod.snd).getD default
+          if s = MTH (D₁.take k) ∧ y' = MTH (D₁.drop k) then
+            extractConsNode (n₀ - k) (n - k) C.dropLast false r (D₁.drop k)
+          else
+            some (0x01 :: (s.val ++ y'.val),
+                  0x01 :: ((MTH (D₁.take k)).val ++ (MTH (D₁.drop k)).val))
+termination_by n
+decreasing_by
+  · have h2 : 2 ≤ n := by omega
+    exact kbelow_lt n h2
+  · have := kbelow_pos n
+    omega
+
 end LTLAcc

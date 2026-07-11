@@ -25,3 +25,4 @@ import Proofs.Consistency
 #print axioms LTLAcc.kbelow_prefix_eq
 #print axioms LTLAcc.take_take_le
 #print axioms LTLAcc.take_drop_prefix
+#print axioms LTLAcc.extractConsNode

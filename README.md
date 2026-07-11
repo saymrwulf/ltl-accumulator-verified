@@ -16,7 +16,7 @@ the same discipline as the four `*-ed25519-verified` subject corpora.
 | L5 | inclusion soundness = EXPLICIT extractor `extractIncl` (Theorem 2) **done, non-vacuous** |
 | L6a | descent extractor `extractMTH` (Theorem 3 step 3 = Lemma 2, WHOLE-TREE instance) **done, non-vacuous** |
 | — | Lemma 2, PATH instance (receipt-uniqueness of `Root`): deleted with the vacuous `root_binding` in S3.5 and **not yet restored**; optional, not needed for Theorem 3 |
-| L6b | ConsRec binding + Theorem 3 assembly (extractCons) | in progress (S5): stage-1 arithmetic/list infrastructure done (kbelow_prefix_eq, take surgery); binding + assembly next |
+| L6b | ConsRec binding + Theorem 3 assembly (extractCons) | in progress (S5): stage-1 arithmetic/list infrastructure done (kbelow_prefix_eq, take surgery); stage-1 infra + extractConsNode extractor DEFINED; binding proof (steps 1-2) + extractCons assembly = stage 3 |
 | L6 | pin-store state machine safety (Proposition 1) | pending |
 
 ## Discipline (identical to the subject corpora)

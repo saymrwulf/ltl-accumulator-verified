@@ -43,6 +43,7 @@ declare -A CONES=(
   [LTLAcc.kbelow_prefix_eq]="propext, Quot.sound"
   [LTLAcc.take_take_le]="propext, Quot.sound"
   [LTLAcc.take_drop_prefix]="propext, Classical.choice, Quot.sound"
+  [LTLAcc.extractConsNode]="propext, LTLAcc.sha256, Quot.sound"
 )
 
 free -m | awk '/Mem:/{if($7<2048){print "FATAL: <2GB RAM available — refusing to compile"; exit 1}}'
