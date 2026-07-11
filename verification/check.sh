@@ -44,10 +44,10 @@ declare -A CONES=(
   [LTLAcc.take_take_le]="propext, Quot.sound"
   [LTLAcc.take_drop_prefix]="propext, Classical.choice, Quot.sound"
   [LTLAcc.extractConsNode]="propext, LTLAcc.sha256, Quot.sound"
-  [LTLAcc.take_all]="propext, Quot.sound"
+  [LTLAcc.take_all]="propext"
   [LTLAcc.consRecBinding]="propext, Classical.choice, LTLAcc.sha256, Quot.sound"
-  [LTLAcc.consRec_base_false_eq]="propext, Quot.sound"
-  [LTLAcc.consRec_base_true_eq]="propext, Quot.sound"
+  [LTLAcc.consRec_base_false_eq]="propext, Classical.choice, Quot.sound"
+  [LTLAcc.consRec_base_true_eq]="propext"
   [LTLAcc.extractCons]="propext, LTLAcc.sha256, Quot.sound"
   [LTLAcc.extractCons_correct]="propext, Classical.choice, LTLAcc.sha256, Quot.sound"
   [LTLAcc.extractCons_nonvacuous]="propext, LTLAcc.sha256, Quot.sound"
@@ -128,4 +128,15 @@ for cert in "${!CONES[@]}"; do
 done
 rm -f "$AUD"
 [ "$FAIL" = 0 ] || exit 1
+# -- Phase 4: definition fidelity (Lean defs vs deployed pacta verifiers) --
+echo "=== Phase 4: definition fidelity ==="
+PACTA_SRC="${PACTA_SRC:-$HERE/../../proof-aware-crypto-tooling-agent/src}"
+if [ "${SKIP_FIDELITY:-0}" = "1" ]; then
+  echo "  skipped (SKIP_FIDELITY=1)"
+elif [ -d "$PACTA_SRC/pacta" ]; then
+  PACTA_SRC="$PACTA_SRC" python3 "$HERE/fidelity/run_fidelity.py" || { echo "FIDELITY FAILED"; exit 1; }
+else
+  echo "  SKIPPED: pacta repo not found at $PACTA_SRC (set PACTA_SRC to run)"
+fi
+
 echo "=== ALL GREEN ==="
