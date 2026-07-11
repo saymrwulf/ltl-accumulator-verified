@@ -3,7 +3,13 @@
    SEMANTICS-PRESERVING — Opus's only evidence was "the chain recompiled".
    These two theorems machine-check the equivalence against the exact
    list-match forms that were replaced, so the refactor's faithfulness is
-   a permanent, cone-audited guarantee. -/
+   a permanent, cone-audited guarantee.
+
+   PROVENANCE (verified against git history, not memory): the RHS forms
+   below are verbatim the base of `ConsRec` at commit cfde9b2 (pre-
+   refactor), and `git diff cfde9b2 8795e82 -- Proofs/Basic.lean` shows
+   the refactor touched ONLY those eight base lines. Unchanged remainder
+   (git) + equal base (kernel) = the whole function is unchanged. -/
 import Proofs.Basic
 
 namespace LTLAcc
