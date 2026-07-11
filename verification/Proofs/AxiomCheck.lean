@@ -6,6 +6,7 @@ import Proofs.Descent
 import Proofs.Consistency
 import Proofs.Binding3
 import Proofs.Refactor
+import Proofs.Theorem3
 #print axioms LTLAcc.domsep
 #print axioms LTLAcc.kbelow_pos
 #print axioms LTLAcc.kbelow_lt
@@ -32,3 +33,6 @@ import Proofs.Refactor
 #print axioms LTLAcc.consRecBinding
 #print axioms LTLAcc.consRec_base_false_eq
 #print axioms LTLAcc.consRec_base_true_eq
+#print axioms LTLAcc.extractCons
+#print axioms LTLAcc.extractCons_correct
+#print axioms LTLAcc.extractCons_nonvacuous
