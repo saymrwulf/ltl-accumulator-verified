@@ -19,8 +19,12 @@ CORES="${LEAN_MAX_CORES:-0-3}"
 GEN_MODULES=( LTLAcc/HashExternal )
 PROOFS=( Basic Completeness Extract Descent Consistency Binding3 Refactor Theorem3 PinStore )
 
-# Certificates and their exact expected cones (observed at first green
-# compile, 2026-07-10; any drift in EITHER direction is a failure).
+# Certificates and their exact expected cones (observed via #print axioms,
+# never guessed; any drift in EITHER direction is a failure).
+# AUDIT SURFACE: every theorem/def under Proofs/ (52) + the two load-bearing
+# gen/ instances (Inhabited/DecidableEq Hash). Excluded by nature: the
+# sanctioned axiom itself (sha256 IS the boundary) and `abbrev Bytes`
+# (a bare type alias, no cone content).
 declare -A CONES=(
   [LTLAcc.domsep]=""
   [LTLAcc.kbelow_pos]="propext, Quot.sound"
@@ -74,6 +78,8 @@ declare -A CONES=(
   [LTLAcc.pow2_exp_unique]="propext, Quot.sound"
   [LTLAcc.take_append_drop]=""
   [LTLAcc.eq_dropLast_append_of_getLast?]="propext"
+  [LTLAcc.instInhabitedHash]="propext"
+  [LTLAcc.instDecidableEqHash]=""
 )
 
 free -m | awk '/Mem:/{if($7<2048){print "FATAL: <2GB RAM available — refusing to compile"; exit 1}}'

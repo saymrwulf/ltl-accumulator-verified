@@ -61,3 +61,5 @@ import Proofs.PinStore
 #print axioms LTLAcc.pinExtract
 #print axioms LTLAcc.pow2_exp_unique
 #print axioms LTLAcc.take_append_drop
+#print axioms LTLAcc.instInhabitedHash
+#print axioms LTLAcc.instDecidableEqHash
