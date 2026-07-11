@@ -26,6 +26,7 @@ declare -A CONES=(
   [LTLAcc.kbelow_pos]="propext, Quot.sound"
   [LTLAcc.kbelow_lt]="propext, Quot.sound"
   [LTLAcc.le_two_kbelow]="propext, Quot.sound"
+  [LTLAcc.kbelow_pow2]="propext, Quot.sound"
   [LTLAcc.MTH]="propext, LTLAcc.sha256, Quot.sound"
   [LTLAcc.Root]="propext, LTLAcc.sha256, Quot.sound"
   [LTLAcc.ConsRec]="propext, LTLAcc.sha256, Quot.sound"

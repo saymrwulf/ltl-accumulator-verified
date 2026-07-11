@@ -57,6 +57,20 @@ theorem le_two_kbelow (n : Nat) (h : 2 ≤ n) : n ≤ 2 * kbelow n := by
       have := ih h2
       omega
 
+/-- `kbelow` is a genuine power of two. Together with `kbelow_lt` and
+    `le_two_kbelow` (`2^j = k < n ≤ 2k = 2^(j+1)`) this pins `kbelow n`
+    as THE largest power of two strictly below `n` — the RFC 9162 split
+    point, uniquely determined. -/
+theorem kbelow_pow2 (n : Nat) : ∃ j, kbelow n = 2 ^ j := by
+  induction n using kbelow.induct with
+  | case1 n hle => exact ⟨0, by rw [kbelow]; simp only [if_pos hle]⟩
+  | case2 n hgt ih =>
+      obtain ⟨j, hj⟩ := ih
+      refine ⟨j + 1, ?_⟩
+      rw [kbelow]
+      simp only [if_neg hgt]
+      rw [hj, Nat.pow_succ, Nat.mul_comm]
+
 /-- `MTH` (paper §5.3): the RFC 9162 tree head over a leaf-data list.
     `MTH [] = H(ε)`, `MTH [d] = hleaf d`, and for `n ≥ 2` the split at
     `k = kbelow n`. -/
