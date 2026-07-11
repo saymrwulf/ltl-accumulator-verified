@@ -5,7 +5,15 @@ Lean 4 mechanization of the security analysis (§6) of the paper
 accumulator's own correctness and soundness theorems, kernel-checked, in
 the same discipline as the four `*-ed25519-verified` subject corpora.
 
-## Status: layer scaffold (work in progress — honest ledger below)
+## Status: **FROZEN for external review** (corpus complete)
+
+All paper-§10 mechanization targets are kernel-checked; the audit surface
+is defined and green (`verification/check.sh`, exit 0). See
+[STATEMENT-MAP.md](STATEMENT-MAP.md) for the paper↔Lean review surface and
+[KNOWN-GAPS.md](KNOWN-GAPS.md) for the honest scope ledger. No changes
+until the external review round (second model instance + GPT + author)
+completes. The finished certificates' attestation into the LTL is a
+separate, explicitly-authorized operator decision.
 
 | layer | content | status |
 |---|---|---|
