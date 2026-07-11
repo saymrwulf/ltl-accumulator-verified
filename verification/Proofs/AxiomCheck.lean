@@ -1,5 +1,6 @@
 /- Axiom-cone observation for the audit (Phase 3 of check.sh). -/
 import Proofs.Basic
+import Proofs.Completeness
 #print axioms LTLAcc.domsep
 #print axioms LTLAcc.kbelow_pos
 #print axioms LTLAcc.kbelow_lt
@@ -7,3 +8,5 @@ import Proofs.Basic
 #print axioms LTLAcc.MTH
 #print axioms LTLAcc.Root
 #print axioms LTLAcc.ConsRec
+#print axioms LTLAcc.Path
+#print axioms LTLAcc.incl_complete
