@@ -44,8 +44,9 @@ Agent Appendix at the end. Every step ends in a mechanical check.
 | pacta | github.com/saymrwulf/proof-aware-crypto-tooling-agent | `3d81d53` (change-frozen during paper processing) |
 | Forgejo mirrors | `https://zkdefi.org/saymrwulf/<repo>.git` (anonymously readable) | pull-synced by server cron nightly 03:00 UTC (`/home/admin/cloud/bin/reconcile-mirrors.py`, log `.reconcile.log`); verify per step A5 |
 | log public key | `lean-transparency-log/provider.ed25519.pub` (PEM) | fingerprint `874c8a00…a56a` in `log-metadata.json` |
-| log PRIVATE key | **location not yet confirmed** | see step A3 — Phase B is blocked until confirmed |
+| log PRIVATE key | **location not yet confirmed**, but verified NOT on the droplet (the server only serves; no key material under `~/cloud/ltl/`) — so it is laptop-side or on removable media | see step A3 — Phase B is blocked until confirmed |
 | producer driver | **does not exist in version control** | see step A4 — Phase B is blocked until persisted |
+| server deployment | private repo `PersonalCloudServer` (github, `master`) — since `a186bac` includes the ltl vhost/service/reconstruct.py, md5-verified == droplet | see its `DEPLOY.md` § "The LTL service" |
 
 ---
 
@@ -173,9 +174,19 @@ advance the pin. **Check:** exit 0, pin now 13. This exercises the
 exact theorems of the corpus one last time, on the real data.
 
 ### B4. Publish
+The droplet serves the log from a DERIVED dir (`~/cloud/ltl/log`),
+rebuilt from a content mirror (`~/cloud/ltl/published`) — a bare
+`git pull` in `app/` is NOT enough (see PersonalCloudServer DEPLOY.md
+§ "The LTL service" for the layout).
 ```
 cd <log clone> && git add -A && git commit -m "log update: leaf 12 - attestation of ltl-accumulator-verified@2da0a79 (paper §6 mechanization)" && git push origin main
-ssh admin@zkdefi.org 'cd /home/admin/cloud/ltl/app && git pull && cd /home/admin/cloud && docker compose restart ltl'
+ssh admin@zkdefi.org
+  cd ~/cloud/ltl/app && git pull                          # code/paper (usually no-op here)
+  # refresh published/ with the new log content, e.g.:
+  git clone --depth 1 https://github.com/saymrwulf/lean-transparency-log /tmp/ltl-pub \
+    && rsync -a --exclude .git /tmp/ltl-pub/ ~/cloud/ltl/published/ && rm -rf /tmp/ltl-pub
+  cd ~/cloud/ltl && python3 reconstruct.py                # re-derive log/
+  cd ~/cloud && docker compose restart ltl
 ```
 **Check:** `curl -s https://ltl.zkdefi.org/v1/sth` returns
 `"tree_size": 13` and the same root the driver computed.
