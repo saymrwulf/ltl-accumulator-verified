@@ -42,7 +42,7 @@ Agent Appendix at the end. Every step ends in a mechanical check.
 | review kit round 4 | SD `outputs/accumulator-review-kit-round4/` | delivered (corpus tarball sha `2963acbb…`, per-file `CORPUS-MANIFEST.sha256`) |
 | log mirror repo | github.com/saymrwulf/lean-transparency-log | `ec12dda` (12 leaves; unchanged since paper submission) |
 | pacta | github.com/saymrwulf/proof-aware-crypto-tooling-agent | `3d81d53` (change-frozen during paper processing) |
-| Forgejo mirrors | zkdefi.org/git (repos not anonymously visible) | sync via nightly server cron; verify per step A5 |
+| Forgejo mirrors | `https://zkdefi.org/saymrwulf/<repo>.git` (anonymously readable) | pull-synced by server cron nightly 03:00 UTC (`/home/admin/cloud/bin/reconcile-mirrors.py`, log `.reconcile.log`); verify per step A5 |
 | log public key | `lean-transparency-log/provider.ed25519.pub` (PEM) | fingerprint `874c8a00…a56a` in `log-metadata.json` |
 | log PRIVATE key | **location not yet confirmed** | see step A3 — Phase B is blocked until confirmed |
 | producer driver | **does not exist in version control** | see step A4 — Phase B is blocked until persisted |
@@ -117,13 +117,23 @@ throwaway copy is then DELETED (its head was signed with the real key
 over a rehearsal tree — it must never be published or retained; if
 retention is wanted for study, rehearse with a throwaway KEY instead).
 
-### A5. Confirm the Forgejo mirrors (operator, from the server)
-The mirrors sync on the server's nightly cron and are not anonymously
-visible. From the server, list the mirrored repos and their heads, and
-confirm `ltl-accumulator-verified` shows `2da0a79` after the next
-03:00 run (or trigger the sync script manually). **Check:** mirror
-head == GitHub head for: ltl-accumulator-verified, lean-transparency-log,
-proof-aware-crypto-tooling-agent, and the four `*-ed25519-verified`.
+### A5. Confirm the Forgejo mirrors (no SSH needed)
+The mirrors are anonymously readable. For each repo, both commands must
+print the same hash:
+
+```
+for r in ltl-accumulator-verified lean-transparency-log \
+         proof-aware-crypto-tooling-agent dalek-ed25519-verified \
+         anza-ed25519-verified risc0-ed25519-verified betrusted-ed25519-verified; do
+  a=$(git ls-remote "https://github.com/saymrwulf/$r.git" main | cut -f1)
+  b=$(git ls-remote "https://zkdefi.org/saymrwulf/$r.git" main | cut -f1)
+  [ "$a" = "$b" ] && echo "OK   $r $a" || echo "LAG  $r github=$a forgejo=$b"
+done
+```
+
+**Check:** seven `OK` lines. A `LAG` line within 24h of a push is
+normal (nightly 03:00 UTC sync); a LAG older than that means the
+server cron needs attention (`/home/admin/cloud/.reconcile.log`).
 
 ---
 
