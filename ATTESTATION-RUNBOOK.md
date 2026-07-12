@@ -44,8 +44,8 @@ Agent Appendix at the end. Every step ends in a mechanical check.
 | pacta | github.com/saymrwulf/proof-aware-crypto-tooling-agent | `3d81d53` (change-frozen during paper processing) |
 | Forgejo mirrors | `https://zkdefi.org/saymrwulf/<repo>.git` (anonymously readable) | pull-synced by server cron nightly 03:00 UTC (`/home/admin/cloud/bin/reconcile-mirrors.py`, log `.reconcile.log`); verify per step A5 |
 | log public key | `lean-transparency-log/provider.ed25519.pub` (PEM) | fingerprint `874c8a00…a56a` in `log-metadata.json` |
-| log PRIVATE key | **location not yet confirmed**, but verified NOT on the droplet (the server only serves; no key material under `~/cloud/ltl/`) — so it is laptop-side or on removable media | see step A3 — Phase B is blocked until confirmed |
-| producer driver | **does not exist in version control** | see step A4 — Phase B is blocked until persisted |
+| log PRIVATE key | **RESOLVED 2026-07-12**: laptop-side, mode 0600, inside a gitignored state dir of the pacta working tree (exact path in operator-private notes, deliberately not in this public file); public half byte-matches `provider.ed25519.pub`. NOT on the droplet. **No second copy exists** — see step A3b | A3 done; A3b (backup) open |
+| producer driver | **RESOLVED 2026-07-12**: it exists and is committed — pacta's `provider/` CLI (`python3 -m pacta_provider`: `check` → signed attestation; `log-append` → leaf + signed STH + receipt; `log-publish` → public face). Heads are signed with `signing_backend: verified-dalek-serial` (the dogfooded verified signer), `self_inclusion: verified`. Only the per-run orchestration was session work | see step A4 (rehearsal, not reconstruction) |
 | server deployment | private repo `PersonalCloudServer` (github, `master`) — since `a186bac` includes the ltl vhost/service/reconstruct.py, md5-verified == droplet | see its `DEPLOY.md` § "The LTL service" |
 
 ---
@@ -91,32 +91,40 @@ openssl pkey -in <CANDIDATE_PRIVATE_KEY> -pubout \
 operator's private notes (never in git). Do not copy the key anywhere,
 do not print it, do not change its permissions.
 
-### A4. Reconstruct and persist the append driver (blocker, found 2026-07-12)
-Finding: the script that appended leaves 8–11 was session work and was
-never committed anywhere. Phase B must not be improvised. Before the
-IACR decision arrives, a driver script must be written, committed (to
-pacta `tools/`, in a commit that touches nothing else — this does not
-alter deployed behavior or any paper claim), and rehearsed. It must do
-exactly, in order, against a THROWAWAY copy of the log repo:
-1. build the attestation JSON for subject `ltl-accumulator-verified @
-   2da0a79` with the same schema as `entries/000008.json`
-   (`pacta.attestation` builders + certificate list from the button's
-   Phase-3 cone output);
-2. compute the leaf bytes (`pacta.transparency.leaf_bytes_for_attestation`),
-   append as `entries/000012.json`;
-3. recompute the root over all 13 leaves (`merkle_root`), build the new
-   head via `pacta.transparency.make_signed_tree_head(log_id,
-   tree_size=13, root_hash, timestamp, private_key_path,
-   public_key_path)`;
-4. update `latest-sth.json`, append to `sth-history.jsonl`, write the
-   inclusion receipt under `receipts/`;
-5. NEVER touch existing files under `entries/`.
+### A4. Rehearse and document the append invocation (revised 2026-07-12)
+Correction to this runbook's first version: the producer driver is NOT
+lost session work — it is the committed `pacta_provider` CLI in pacta's
+`provider/` tree (`check` emits the signed attestation; `log-append`
+appends the leaf and signs the new head via `make_signed_tree_head`,
+using the verified-dalek-serial dogfood signer; `log-publish` exports
+the public face that `lean-transparency-log` and the droplet's
+`published/` carry; `serve` never touches keys). Leaves 8–11 were
+produced exactly this way. What was never persisted is only the
+per-run orchestration (the loop + flags).
+
+To do before the IACR decision arrives:
+1. Write down, in operator-private notes, the exact `pacta_provider
+   check` / `log-append` / `log-publish` invocation for the subject
+   `ltl-accumulator-verified @ 2da0a79` (flags per the leaves-8–11
+   pattern; key/pub paths from A3's notes).
+2. Rehearse it against a THROWAWAY copy of the log state.
 **Check (rehearsal, throwaway copy only):** `pacta witness-audit` on
-the throwaway copy exits 0 — every prefix root recomputed, every
+the throwaway export exits 0 — every prefix root recomputed, every
 historical STH + signature verified, including the new one. The
 throwaway copy is then DELETED (its head was signed with the real key
 over a rehearsal tree — it must never be published or retained; if
 retention is wanted for study, rehearse with a throwaway KEY instead).
+
+### A3b. Back up the signing key (opened 2026-07-12 — the key has NO second copy)
+The laptop file is the only copy in existence; a disk failure would
+freeze the log at its current size forever (still verifiable, never
+extendable). Operator-only: create an ENCRYPTED backup (e.g.
+`openssl enc -aes-256-cbc -pbkdf2` or `age`) of the key file onto the
+SD card under the standing naming convention, passphrase memorized or
+stored separately — never plaintext, never in any git repo, never on
+the droplet. **Check:** decrypt the backup to a temp file, run A3's
+openssl pubkey diff against it (prints KEY CONFIRMED), shred the temp
+file.
 
 ### A5. Confirm the Forgejo mirrors (no SSH needed)
 The mirrors are anonymously readable. For each repo, both commands must
