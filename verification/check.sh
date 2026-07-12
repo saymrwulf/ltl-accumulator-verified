@@ -9,7 +9,11 @@
 #         2 compile manifest · 3 boundary-exact axiom audit
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
-source ~/aeneas-toolchain/env.sh
+# Toolchain bootstrap is overridable for reviewers with their own install
+# (review round 3, GPT §7); the operator default stays pinned.
+AENEAS_ENV="${AENEAS_ENV:-$HOME/aeneas-toolchain/env.sh}"
+[ -f "$AENEAS_ENV" ] || { echo "FATAL: Aeneas environment not found: $AENEAS_ENV (set AENEAS_ENV; or use run_bare.sh with a plain lean per lean-toolchain)"; exit 1; }
+source "$AENEAS_ENV"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 AENEAS_LEAN="$AENEAS_HOME/backends/lean"
 TIMEOUT="${LEAN_TIMEOUT:-600}"
@@ -86,6 +90,8 @@ declare -A CONES=(
   [LTLAcc.acceptIncl_complete]="propext, Classical.choice, LTLAcc.sha256, Quot.sound"
   [LTLAcc.acceptIncl_sound]="propext, Classical.choice, LTLAcc.sha256, Quot.sound"
   [LTLAcc.extractCons_correct_paper]="propext, Classical.choice, LTLAcc.sha256, Quot.sound"
+  [LTLAcc.consRec_some_le]="propext, LTLAcc.sha256, Quot.sound"
+  [LTLAcc.acceptCons_sound]="propext, Classical.choice, LTLAcc.sha256, Quot.sound"
 )
 
 # (The former EXCLUDE table is gone: since Phase 3b reads the environment,
@@ -225,8 +231,11 @@ while IFS='|' read -r _ name _ cone; do
       echo "  CONE CROSS-CHECK FAILED: $name CONES=[$want] inventory=[$got]"; COVFAIL=1; }
   fi
 done < <(grep '^INV|' "$HERE/inventory-allowlist.txt")
+# (field-equality, not regex — dots in names must not act as wildcards;
+#  review round 3, F4)
 for cert in "${!CONES[@]}"; do
-  grep -q "^INV|$cert|" "$HERE/inventory-allowlist.txt" || {
+  awk -F'|' -v n="$cert" '$1=="INV" && $2==n {found=1} END {exit !found}' \
+      "$HERE/inventory-allowlist.txt" || {
     echo "  PINNED BUT NOT INVENTORIED: $cert (in CONES, not in allowlist)"; COVFAIL=1; }
 done
 rm -f "$INVLOG"

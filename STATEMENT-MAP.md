@@ -21,11 +21,11 @@ mechanization to items i–v).
 | Lemma 2, whole-tree instance | `extractMTH` + `extractMTH_correct` | Descent | sha256 (+choice) |
 | Lemma 2, ConsRec instance (Thm 3 steps 1–2) | `consRecBinding` | Binding3 | sha256 (+choice) |
 | Theorem 2 (inclusion soundness, explicit 𝓔) | `extractIncl` + `extractIncl_correct` | Extract | sha256 (+choice) |
-| Theorem 3 (consistency soundness, explicit 𝓔′) | `extractCons` + `extractCons_correct`; `extractCons_correct_paper` at the paper's exact quantifiers (n₀=0 discharged) | Theorem3 | sha256 (+choice) |
+| Theorem 3 (consistency soundness, explicit 𝓔′) | `extractCons` + `extractCons_correct`; `extractCons_correct_paper` at the paper's exact quantifiers (n₀=0 discharged); `acceptCons_sound` routes it through the named `acceptCons` predicate (size bound derived from acceptance via `consRec_some_le`). Covers the MECHANIZED accept set; transfer to the deployed verifier is conditional on the pinned-pair side condition of gap 14 | Theorem3 | sha256 (+choice) |
 | Prop 1(1) (pin monotonicity + prefix) | `pinAccept`, `pinAccept_monotone`, `pin_prefix_correct` | PinStore | sha256 (+choice) |
 | Prop 1(2), Merkle share | `fork_distinct` (different roots ⇒ different content); transferability = signature layer, out of scope | PinStore | sha256 |
 | non-vacuity guards (anti-pigeonhole) | `extractIncl_nonvacuous`, `extractMTH_nonvacuous`, `extractCons_nonvacuous`, `pin_prefix_nonvacuous` | Extract/Descent/Theorem3/PinStore | sha256 |
-| definition fidelity vs deployed verifier | `fidelity/` harness: MTH==merkle_root, Path==inclusion_proof, verifier agreement 230,271 inclusion + 230,016 consistency (paper's case set + out-of-range families m≥n, n₀>n₁, n₀=0; round-2 M2 fixed the stale pre-expansion counts here) | fidelity | (testing) |
+| definition fidelity vs deployed verifier | `fidelity/` harness: MTH==merkle_root, Path==inclusion_proof, verifier agreement 230,271 inclusion + 230,016 consistency over the pinned case families — **not extensional equality**: the lied-size family (73,573 cases) pins the known one-sided divergence of gap 14 (3,867 expected, deployed-accepts-only, direction asserted) | fidelity | (testing) |
 
 Note on "assumption-free" (paper §10(i)): `incl_complete`'s cone lists
 `LTLAcc.sha256`, but the theorem assumes **no property** of it — it

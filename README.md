@@ -40,6 +40,10 @@ separate, explicitly-authorized operator decision.
 - `verification/check.sh` is THE button: compiles every file through
   `lean-guard` (memory cap, core pinning, timeout, single-flight lock)
   and axiom-audits every certificate against its documented exact cone.
+- Reviewers without the operator toolchain: `verification/run_bare.sh`
+  compiles, axiom-audits, and inventory-gates the corpus with a plain
+  public `lean` (version pinned in `verification/lean-toolchain`); the
+  operator path is overridable via `AENEAS_ENV`.
 - Expected boundary: `propext, Classical.choice, Quot.sound` plus
   `LTLAcc.sha256` for hash-touching certificates — documented per
   certificate in `check.sh`, audited both directions.

@@ -1,136 +1,119 @@
-# Response to reviewers — round 3
+# Response to reviewers — round 4
 
-Corpus: `ltl-accumulator-verified`. Round-2 reviews received against the
-round-2 freeze `260ad64` (GPT-5.6 second adversarial review; second
-Claude round-2 findings). Every finding was independently re-verified
-against the corpus before any change; all confirmed findings are fixed
-in this freeze. No theorem statement changed except the one interface
-tightening both reviewers requested (L1/NEW-2).
+Corpus: `ltl-accumulator-verified`. Round-3 reviews received against the
+round-3 freeze `9972ab4`: GPT-5.6 (conditional approval, one portability
+finding) and the round-3 Claude reviewer's Socratic addendum (one new
+confirmed finding, four reinstated ones). Every claim was independently
+re-verified by the operator before any change. This round contains ONE
+new theorem, one harness family, and packaging/scoping fixes. No
+existing theorem statement or proof changed.
 
-## Disposition of round-2 findings
+## The headline: F1* (Claude addendum) — CONFIRMED and absorbed
 
-### GPT H1 / Claude NEW-1 — coverage gate evadable (CONFIRMED, fixed structurally)
+The addendum demonstrated that the deployed `verify_consistency` and
+the mechanized `ConsRec` acceptance are **not extensionally equal**:
+the deployed RFC 9162 iterative verifier accepts honest proofs under
+lied size claims (witness: `verify_consistency(1, 3, R2, R3, P(2→3)) =
+True`; ConsRec rejects). Reproduced exactly on the operator machine
+against deployed pacta: same witness, same 3,405 divergences for
+n < 60, same strictly one-sided direction (the mechanized model is the
+stricter; inclusion diverges nowhere under identical abuse), same
+power-of-two seeding mechanism in the deployed source.
 
-Both reviewers were right, and GPT's namespace-collision attack
-(`LTLAcc.Hidden.MTH` classified against `CONES[LTLAcc.MTH]`) showed that
-regex hardening (Claude's proposed fix) would not have closed the class.
-We adopted GPT's required correction in full — the inventory is now
-derived from the Lean environment, not from source:
+Absorbed as follows:
 
-- **`Proofs/Inventory.lean`** imports every corpus module and emits
-  EVERY constant whose originating module is a corpus module: fully
-  qualified name, declaration kind, and axiom cone. There is **no
-  filtering** — compiler-generated auxiliaries and `_private.*` mangles
-  are emitted and pinned too, so there is no name shape that can hide.
-  A corpus module missing from the import list is an elaboration error.
-- The axiom cone is computed by our own walker AND cross-checked
-  in-process against core `collectAxioms` (the machinery `#print axioms`
-  uses) for every constant — divergence is a hard error. (This caught a
-  real toolchain subtlety during development: `ConstantInfo.value?`
-  returns `none` for theorems on 4.30.0-rc2, which would have silently
-  truncated cones; the direct constructor match avoids it, and the
-  cross-check would have refused to ship it.)
-- **`verification/inventory-allowlist.txt`** pins all 218 constants;
-  **`inventory_gate.sh`** diffs environment vs allowlist fail-closed in
-  BOTH directions (UNCLASSIFIED / STALE), requires the INV-COUNT
-  trailer (a truncated Lean run cannot pass as an empty diff), and
-  asserts the whole corpus contains exactly one axiom-kind constant:
-  `LTLAcc.sha256`.
-- check.sh Phase 3b additionally verifies: the inventory's module list
-  == the compile manifest (both directions), every CONES entry appears
-  in the allowlist **with an identical cone** (two independent cone
-  computations must agree), and every CONES entry is queried by
-  AxiomCheck.
-- **GPT release condition 2 (adversarial tests) is met by
-  `verification/selftest_audit.sh`**, which attacks the exact production
-  gate: attributed, indented, private, and instance declarations, the
-  nested-namespace basename collision, a smuggled axiom, a deleted
-  declaration (STALE direction), and unmanifested `Proofs/` and `gen/`
-  modules through the full check.sh — plus a positive control so the
-  self-test cannot pass vacuously. Transcript in the kit
-  (`selftest-transcript.txt`).
+- **KNOWN-GAPS gap 14**: full statement — witness, mechanism,
+  one-sidedness, and the soundness-transfer side condition (the
+  consumer's `(n₀, r₀)` is an authentic pinned pair and `n₁` is the
+  authentic size behind `r₁`), which pacta's pin-store flow supplies by
+  construction. No exploitability against that flow is claimed or ruled
+  out; that assessment belongs to the signature/STH layer (gap 4).
+- **Harness**: new lied-size family — 73,573 boundary cases (lied old
+  size exhaustive for n < 60, lied new size sampled), 3,867 expected
+  divergences PINNED, and the one-sided direction asserted on every
+  case: a single `lean=True / deployed=False` instance fails the run.
+  These families would have caught F1* in round 1; now they guard it
+  forever.
+- **Banner**: `FIDELITY GREEN` now reads "agreement over the pinned
+  case families (not extensional equality; KNOWN-GAPS gap 14)". The
+  STATEMENT-MAP fidelity row and Theorem-3 row carry the same scoping.
+- **No pacta code change.** The deployed behavior matches upstream
+  RFC 9162 implementations; the consumer flow enforces the side
+  condition (`n₀` comes from the consumer's own pin, never from the
+  peer; `(n₁, r₁)` arrive together in one signed head). pacta also
+  remains change-frozen during paper processing.
 
-### GPT H2 — fidelity target could not run (CONFIRMED, fixed)
+## F2 — `acceptCons` routed through zero theorems (CONFIRMED, fixed)
 
-Reproduced exactly (`ModuleNotFoundError: pacta.postquantum`). The
-round-3 `pacta-fidelity-target` ships the complete **load-time import
-closure** of `pacta.transparency` (`__init__`, `transparency`,
-`postquantum`, `signing`, `yamlio`) — all stdlib-only, so a bare
-Python 3 runs it with no pip installs — content-addressed in
-`MANIFEST.sha256` against pacta commit `3d81d538…` with verification
-instructions (`TARGET-PROVENANCE.md`). The kit includes the complete
-terminal transcript AND exit code of `run_fidelity.py` executed from a
-clean extraction: exit 0, `230,271 + 230,016`, zero mismatches
-(`fidelity-clean-run-transcript.txt`), plus the full green `check.sh`
-transcript ending in `ATTESTATION GREEN` with fidelity not skipped
-(`check-transcript.txt`) — GPT release conditions 3 and 5.
+New theorem `acceptCons_sound` (Theorem3.lean): soundness stated over
+the named `acceptCons` predicate the harness tests — the consistency
+twin of round-2's `acceptIncl_sound`. The `n₀ = 0` disjunct is
+discharged from the non-prefix premise; the size bound `n₀ ≤ n₁` is
+derived from ConsRec acceptance itself via the new lemma
+`consRec_some_le` (the `n₀ > n` branch returns `none`), so the caller
+owes nothing beyond acceptance + wrong-prefix. Cones (read from
+`#print axioms`, as always): `consRec_some_le` = [propext,
+LTLAcc.sha256, Quot.sound]; `acceptCons_sound` = [propext,
+Classical.choice, LTLAcc.sha256, Quot.sound]. Both are in CONES,
+AxiomCheck, and the inventory allowlist (218 → 222 constants; the diff
+is exactly the two theorems plus their two generated auxiliaries).
 
-### GPT M1 — audit narrower outside Proofs/ (CONFIRMED, fixed)
+## F3 — Lean-side kit reproducibility (CONFIRMED, fixed)
 
-- Orphan-olean guard is now recursive over the whole tree (it caught a
-  stray development artifact on its first run).
-- gen/ has the same unmanifested-source ("dead file") check as Proofs/.
-- The axiom surface is pinned corpus-wide twice: textually (exactly one
-  `axiom` line under gen/, none under Proofs/) and semantically (the
-  inventory admits exactly one axiom-kind constant anywhere).
-- Declaration discovery under gen/ now goes through the environment
-  inventory like everything else.
+`verification/lean-toolchain` now pins `leanprover/lean4:v4.30.0-rc2`,
+and `verification/run_bare.sh` is the reviewer's standalone runner:
+plain public `lean`, no lake, no Aeneas checkout — compile all modules,
+print all cones, run the inventory gate. Verified green on this machine
+(under the operator's memory-cap discipline): 61 cone lines, 222
+constants, gate green. check.sh remains the operator's button.
 
-### GPT M2 — stale fidelity counts in STATEMENT-MAP (CONFIRMED, fixed)
+## F4 — regex metacharacters in Phase 3b (CONFIRMED, fixed)
 
-The row now reads 230,271 + 230,016 with the expanded families named.
-Process note: the round-2 Claude review certified this row as already
-fixed; it was not. Consistent with this project's experience, "verified"
-claims by reviewers are themselves re-verified now.
+The `PINNED BUT NOT INVENTORIED` check now uses awk field equality
+instead of a regex containing the constant name; the module-manifest
+greps were already `-F`. Dots no longer act as wildcards anywhere in
+the gate.
 
-### GPT M3 — "not choice-dischargeable" overclaims (CONFIRMED, fixed)
+## F5 — kit hygiene (CONFIRMED, fixed; one sharpening)
 
-STATEMENT-MAP now uses (essentially) GPT's safer wording: the guards
-show each named extractor returns a non-collision on at least one
-canonical honest input, ruling out the globally-inhabited-existential
-degeneration; they do NOT establish logical dependence on every
-hypothesis, nor exclude other classical arguments on restricted domains.
+The stray `.pyc` was worse than reported: it was **git-tracked**, which
+is why `git archive` shipped it. Untracked; `__pycache__/`/`*.pyc`
+gitignored. The round-4 kit gives the corpus tarball the same treatment
+as the pacta target: `MANIFEST.sha256` over every file in the archive
+plus the pinned public commit and repo URL — this also implements
+GPT's governance condition (publish hashes of the audit-critical
+files; they are all in the archive the manifest covers).
 
-### GPT L1 / Claude NEW-2 — redundant `hm` in `acceptIncl_sound` (CONFIRMED, fixed)
+## GPT §7 — hard-coded toolchain bootstrap (CONFIRMED, fixed)
 
-The hypothesis is gone; the range fact is derived from `hacc.1`, so the
-theorem is stated purely in terms of acceptance + wrong-leaf premise.
-Cone unchanged (`propext, Classical.choice, LTLAcc.sha256, Quot.sound`),
-re-verified by `#print axioms` and the inventory.
+`AENEAS_ENV` override with a clear FATAL message in both check.sh and
+selftest_audit.sh, exactly as recommended; default unchanged for the
+operator. Together with F3 this closes the "reviewer-friendly
+push-button" gap: reviewers get `run_bare.sh`, operators keep the
+guarded button.
 
-### GPT ledger additions (adopted, as history)
+## GPT §9 — paper-language conditions
 
-KNOWN-GAPS gains gap 12 (audit-gate lineage: the round-2 gate was
-evadable, what replaced it, and the residual limits of an
-environment-derived inventory — it cannot see never-compiled source,
-which the dead-file checks cover, nor defeat a hostile toolchain) and
-gap 13 (the round-2 kit's fidelity target was not self-contained).
+Adopted into the paper-cycle queue verbatim (they overlap the queue
+built across rounds 1–3), plus F1*'s two additions: the fidelity
+sentence must say "finite differential testing over pinned families,
+extensional equality is false for consistency (one-sided)", and
+Theorem 3's deployment claim must carry the pinned-pair side condition.
+The paper is edited in its own cycle, not in this corpus.
 
-## Found in round-3 self-review (neither reviewer caught)
+## Reviewer-process note (kept, per this project's candor convention)
 
-- **README layer table was still stale at `260ad64`**: L4 carried
-  "queued for S4 restoration" and the pin-store row said "pending",
-  despite round-1 F2 being certified as fixed by the round-2 Claude
-  review. The table now matches the frozen state (all layers done,
-  L4 explicitly "done as specializations" per gap 3).
-- KNOWN-GAPS gap 2 still cited the old 164,224 count; updated.
-
-## Round-2 Claude review, remaining notes
-
-NEW-1 was correct in direction; we implemented the stronger
-environment-based fix rather than the proposed regex broadening, since
-the namespace collision defeats any basename-keyed source scan. The
-round-2 Claude claim that the fidelity harness was "confirmed green
-against the real pacta code" was obtained by hand-stubbing the missing
-modules — with the round-3 self-contained target, that result is now
-reproducible by anyone from the kit alone.
+The round-3 Claude reviewer's self-analysis (Q1–Q7) found its own
+"confirmed/verified" inflations and then did what the drill demands:
+applied constructive-witness standards to its own strongest doubt and
+produced F1*. Its round-3.5 addendum is the strongest single review
+artifact this corpus has received. The operator re-verified every claim
+in it anyway — trust nothing, including good news.
 
 ## What did NOT change
 
-All theorem statements and proofs except the `acceptIncl_sound`
-signature tightening; the axiom boundary (single opaque `sha256`); the
-pinned CONES table (59 entries, all cones byte-identical to round 2);
-the fidelity counts. The live transparency log remains frozen at
-12 leaves (root `bcd15f9d…`) and is untouched by this round;
-attestation remains blocked pending the ePrint decision, author
-review, and an explicit operator order.
+All pre-existing theorem statements and proofs; the axiom boundary
+(single opaque `sha256`); the 230,271/230,016 family pins; the live
+transparency log (12 leaves, root `bcd15f9d…`); deployed pacta.
+Attestation remains blocked pending the ePrint decision, the author's
+read, and an explicit operator order.

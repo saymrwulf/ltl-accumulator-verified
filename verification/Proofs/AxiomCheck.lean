@@ -68,3 +68,5 @@ import Proofs.PinStore
 #print axioms LTLAcc.acceptIncl_sound
 #print axioms LTLAcc.extractCons_correct_paper
 #print axioms LTLAcc.Hash
+#print axioms LTLAcc.consRec_some_le
+#print axioms LTLAcc.acceptCons_sound

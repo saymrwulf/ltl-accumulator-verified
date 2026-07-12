@@ -1,2 +1,5 @@
 *.olean
 .lake/
+__pycache__/
+*.pyc
+bare-*.out

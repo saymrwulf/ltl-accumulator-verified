@@ -27,7 +27,9 @@
 # All Lean work goes through lean-guard (memory-capped, single-flight).
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
-source ~/aeneas-toolchain/env.sh
+AENEAS_ENV="${AENEAS_ENV:-$HOME/aeneas-toolchain/env.sh}"
+[ -f "$AENEAS_ENV" ] || { echo "FATAL: Aeneas environment not found: $AENEAS_ENV"; exit 1; }
+source "$AENEAS_ENV"
 SRC="$(cd "$(dirname "$0")" && pwd)"
 AENEAS_LEAN="$AENEAS_HOME/backends/lean"
 CORES="${LEAN_MAX_CORES:-0-3}"

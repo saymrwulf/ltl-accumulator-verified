@@ -77,3 +77,30 @@ list is COMPLETE, not merely that the items are acceptable.
    from the kit). Round 3 ships the complete stdlib-only import closure
    of `pacta.transparency`, content-addressed against pacta commit
    `3d81d53`, plus the clean-extraction transcript with exit code.
+14. **Deployed `verify_consistency` accepts strictly more than the
+   mechanized `ConsRec` on lied-size inputs** (round-3 Claude addendum
+   F1*, reproduced by the operator against deployed pacta). Witness:
+   for the honest proof P between sizes 2→3, `verify_consistency(1, 3,
+   R2, R3, P)` returns True — a semantically false claim ("R2 is the
+   root of a size-1 prefix") — while `ConsRec` rejects; 3,405 such
+   divergences exist for n < 60, ALL one-sided (the mechanized model
+   never accepts anything the deployed verifier rejects; inclusion
+   shows zero divergences under identical abuse). Mechanism: when the
+   claimed old size is a power of two, the deployed RFC 9162 iterative
+   algorithm seeds the walk with the old root and uses the sizes only
+   as bit-navigation state, so several size claims navigate one proof
+   identically. Consequences: (a) fidelity between the two consistency
+   verifiers is agreement over the pinned case families, NOT
+   extensional equality — the harness's lied-size family pins the
+   boundary (73,573 cases, 3,867 expected divergences, direction
+   asserted one-sided); (b) Theorem 3 / `acceptCons_sound` cover the
+   MECHANIZED accept set, and their soundness transfers to the deployed
+   verifier only under the side condition that the consumer's
+   `(n₀, r₀)` is an authentic pinned pair and `n₁` is the authentic
+   size of the tree behind `r₁` — which pacta's pin-store flow supplies
+   by construction (`n₀` comes from the consumer's own pin, never from
+   the peer; `(n₁, r₁)` arrive together in one signed head). No
+   exploitability against that flow is claimed or ruled out here;
+   assessing it requires the signature/STH layer (gap 4). No pacta code
+   change is made (deployed behavior matches upstream RFC 9162
+   implementations; the consumer flow enforces the side condition).

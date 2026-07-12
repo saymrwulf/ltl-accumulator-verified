@@ -78,4 +78,41 @@ theorem extractCons_correct_paper (n₀ : Nat) (C : List Hash) (D₀ D₁ : List
     rw [hD0, h0]; simp
   · exact extractCons_correct n₀ C D₀ D₁ hlen0 hpos hle hne hacc
 
+/-- `ConsRec` acceptance implies the size bound: the `n₀ > n` branch
+    returns `none`, so a `some` forces `n₀ ≤ n`. Lets `acceptCons_sound`
+    owe no separate range hypothesis (mirrors `acceptIncl_sound`
+    deriving `m < n` from `hacc.1` — review round 3, F2). -/
+theorem consRec_some_le {n₀ n : Nat} {C : List Hash} {b : Bool} {r : Hash}
+    {p : Hash × Hash} (h : ConsRec n₀ n C b r = some p) : n₀ ≤ n := by
+  rcases Nat.lt_or_ge n n₀ with hgt | hge
+  · rw [ConsRec, if_neg (by omega : ¬ n₀ = n),
+        if_pos (Or.inl hgt : n₀ > n ∨ n₀ = 0 ∨ n ≤ 1)] at h
+    simp at h
+  · exact hge
+
+/-- Consistency soundness through the named acceptance predicate
+    (review round 3, F2 — the consistency twin of `acceptIncl_sound`):
+    if `acceptCons` holds between the pinned head of `D₀` and the head
+    of `D₁` but `D₀` is not the real prefix, `extractCons` outputs a
+    collision. The `n₀ = 0` disjunct of `acceptCons` is impossible under
+    `hne` (`D₀ = [] = D₁.take 0`); the size bound comes from acceptance
+    itself (`consRec_some_le`).
+
+    SCOPE (gap 14): this covers the MECHANIZED accept predicate. The
+    deployed `verify_consistency` accepts strictly more on inputs whose
+    claimed sizes are not the authentic sizes of the trees behind the
+    roots; soundness transfers to deployment only under the pinned-pair
+    side condition documented in KNOWN-GAPS gap 14. -/
+theorem acceptCons_sound (n₀ : Nat) (C : List Hash) (D₀ D₁ : List Bytes)
+    (hlen0 : D₀.length = n₀)
+    (hne : D₀ ≠ D₁.take n₀)
+    (hacc : acceptCons n₀ D₁.length (MTH D₀) (MTH D₁) C) :
+    IsCollision (extractCons n₀ C D₀ D₁).1 (extractCons n₀ C D₀ D₁).2 := by
+  rcases hacc with h0 | hcons
+  · exfalso; apply hne
+    have hD0 : D₀ = [] := List.length_eq_zero_iff.mp (by omega)
+    rw [hD0, h0]; simp
+  · exact extractCons_correct_paper n₀ C D₀ D₁ hlen0
+      (consRec_some_le hcons) hne hcons
+
 end LTLAcc
