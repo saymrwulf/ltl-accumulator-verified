@@ -215,6 +215,12 @@ naming. **Check:** SD hashes match the repo files.
   specializations; fidelity = pinned-family testing, extensional
   equality false one-sided; Theorem-3 pinned-pair side condition;
   §10(i)/(v) phrasings) — paper repo, its own commit.
+- Publish the accumulator blog post: source parked at
+  `docs/optimistic-accountability.md` (this repo) — condense to the
+  blog's voice, END WITH A LINK TO THE LIVE LEAF (that is why it
+  waited), operator reviews, then one .md into PersonalCloudServer
+  `blog/posts/`, `build-blog.py`, rsync per its DEPLOY.md. Closes the
+  "one post per public repo" gap for this repo.
 - One-line note in this file: date, leaf hash, head root. Commit.
 
 ---
