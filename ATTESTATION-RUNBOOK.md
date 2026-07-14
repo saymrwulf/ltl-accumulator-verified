@@ -44,7 +44,7 @@ Agent Appendix at the end. Every step ends in a mechanical check.
 | pacta | github.com/saymrwulf/proof-aware-crypto-tooling-agent | `3d81d53` (change-frozen during paper processing) |
 | Forgejo mirrors | `https://zkdefi.org/saymrwulf/<repo>.git` (anonymously readable) | pull-synced by server cron nightly 03:00 UTC (`/home/admin/cloud/bin/reconcile-mirrors.py`, log `.reconcile.log`); verify per step A5 |
 | log public key | `lean-transparency-log/provider.ed25519.pub` (PEM) | fingerprint `874c8a00…a56a` in `log-metadata.json` |
-| log PRIVATE key | **RESOLVED 2026-07-12**: laptop-side, mode 0600, inside a gitignored state dir of the pacta working tree (exact path in operator-private notes, deliberately not in this public file); public half byte-matches `provider.ed25519.pub`. NOT on the droplet. **No second copy exists** — see step A3b | A3 done; A3b (backup) open |
+| log PRIVATE key | **RESOLVED 2026-07-12**: laptop-side, mode 0600, inside a gitignored state dir of the pacta working tree (exact path in operator-private notes, deliberately not in this public file); public half byte-matches `provider.ed25519.pub`. NOT on the droplet. **No second copy exists** — see step A3b | A3 done; A3b done (operator, 2026-07-14) |
 | producer driver | **RESOLVED 2026-07-12**: it exists and is committed — pacta's `provider/` CLI (`python3 -m pacta_provider`: `check` → signed attestation; `log-append` → leaf + signed STH + receipt; `log-publish` → public face). Heads are signed with `signing_backend: verified-dalek-serial` (the dogfooded verified signer), `self_inclusion: verified`. Only the per-run orchestration was session work | see step A4 (rehearsal, not reconstruction) |
 | server deployment | private repo `PersonalCloudServer` (github, `master`) — since `a186bac` includes the ltl vhost/service/reconstruct.py, md5-verified == droplet | see its `DEPLOY.md` § "The LTL service" |
 
@@ -115,7 +115,9 @@ throwaway copy is then DELETED (its head was signed with the real key
 over a rehearsal tree — it must never be published or retained; if
 retention is wanted for study, rehearse with a throwaway KEY instead).
 
-### A3b. Back up the signing key (opened 2026-07-12 — the key has NO second copy)
+### A3b. Back up the signing key — **DONE (operator, confirmed 2026-07-14)**
+Completed by the operator; the procedure below is retained as the
+reference for future key-backup refreshes.
 The laptop file is the only copy in existence; a disk failure would
 freeze the log at its current size forever (still verifiable, never
 extendable). Operator-only: create an ENCRYPTED backup (e.g.
