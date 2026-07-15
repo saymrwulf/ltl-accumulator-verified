@@ -21,6 +21,17 @@ command -v lean >/dev/null || { echo "FATAL: no 'lean' on PATH (want $(cat "$HER
 echo "toolchain: $(lean --version)"
 echo "pinned:    $(cat "$HERE/lean-toolchain")"
 
+# Fail-closed toolchain check (review round 4, GPT §5): BARE RUN GREEN is
+# reserved for the pinned version AND Lean commit — a different toolchain
+# must not be able to print the green marker.
+EXPECTED_VERSION="4.30.0-rc2"
+EXPECTED_COMMIT="3dc1a088b6d2d8eafe25a7cd7ec7b58d731bd7cc"
+ACTUAL="$(lean --version)"
+grep -qF "version $EXPECTED_VERSION" <<<"$ACTUAL" || {
+  echo "FATAL: toolchain version mismatch (want $EXPECTED_VERSION): $ACTUAL"; exit 1; }
+grep -qF "commit $EXPECTED_COMMIT" <<<"$ACTUAL" || {
+  echo "FATAL: toolchain commit mismatch (want $EXPECTED_COMMIT): $ACTUAL"; exit 1; }
+
 export LEAN_PATH="${LEAN_PATH:+$LEAN_PATH:}$HERE/gen:$HERE"
 
 echo "=== compile (gen + 9 proof modules) ==="

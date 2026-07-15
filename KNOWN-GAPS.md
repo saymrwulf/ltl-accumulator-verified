@@ -92,15 +92,37 @@ list is COMPLETE, not merely that the items are acceptable.
    identically. Consequences: (a) fidelity between the two consistency
    verifiers is agreement over the pinned case families, NOT
    extensional equality — the harness's lied-size family pins the
-   boundary (73,573 cases, 3,867 expected divergences, direction
-   asserted one-sided); (b) Theorem 3 / `acceptCons_sound` cover the
-   MECHANIZED accept set, and their soundness transfers to the deployed
-   verifier only under the side condition that the consumer's
-   `(n₀, r₀)` is an authentic pinned pair and `n₁` is the authentic
-   size of the tree behind `r₁` — which pacta's pin-store flow supplies
-   by construction (`n₀` comes from the consumer's own pin, never from
-   the peer; `(n₁, r₁)` arrive together in one signed head). No
-   exploitability against that flow is claimed or ruled out here;
-   assessing it requires the signature/STH layer (gap 4). No pacta code
-   change is made (deployed behavior matches upstream RFC 9162
-   implementations; the consumer flow enforces the side condition).
+   boundary (73,573 cases: lied old size exhaustive for n < 60, lied
+   new size at fixed offsets n−1/n+1/n+7; 3,867 expected divergences,
+   direction asserted one-sided per case); (b) Theorem 3 /
+   `acceptCons_sound` cover the MECHANIZED accept set. The exhibited
+   divergence is outside the intended pin-store input invariant;
+   applying the mechanized soundness result to the deployed flow
+   therefore additionally ASSUMES that the deployed state machine
+   always binds each root to its authentic size and exposes no
+   alternate invocation path — an invariant that is NOT mechanized in
+   this corpus (gap 15). Where the invariant's witnesses live: paper
+   §5.3 (the signed head binds `(n₁, r₁)` together under one
+   signature) and §5.4 (the pin `(n₀, r₀)` comes from the consumer's
+   own store, never from the peer), implemented in the pacta repo at
+   `src/pacta/sthstore.py` and `src/pacta/logclient.py` — code OUTSIDE
+   the supplied fidelity target (review R4-3/GPT-4). No exploitability
+   against that flow is claimed or ruled out here; assessing it
+   requires the signature/STH layer (gap 4). No pacta code change is
+   made (deployed behavior matches upstream RFC 9162 implementations).
+15. **Deployment refinement invariant unmechanized** (round-4 GPT, its
+   principal finding — split out from gap 14 because it carries the
+   deployed-soundness claim). The corpus proves soundness of the
+   mechanized `acceptCons`; it does NOT prove the refinement
+   `AuthenticPair(n₀,r₀,D₀) ∧ AuthenticPair(n₁,r₁,D₁) ∧
+   verify_consistency(…) → acceptCons(…)`. The operational invariant
+   (authentic-size/root binding via the signed-head + pin-store flow)
+   is relied upon but unverified, and the consumer flow implementing it
+   is not in the supplied fidelity target. Consequently any attestation
+   of this corpus must be scoped to the MECHANIZED model: "the deployed
+   consistency verifier is formally verified" is NOT a claim this
+   corpus supports. Closure paths (roadmap, operator decision, post
+   paper-freeze): (A) make the deployed verifier adopt
+   ConsRec-equivalent acceptance; or (B) mechanize the signed-head +
+   pin-store state machine and prove the refinement; or (C) keep the
+   boundary and this scoped claim permanently.

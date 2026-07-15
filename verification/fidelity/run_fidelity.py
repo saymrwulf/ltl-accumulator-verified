@@ -167,7 +167,7 @@ def main():
     ti, rc, pc = inclusion()
     print(f"  inclusion:   {ti} verifier cases, {rc} MTH==merkle_root, {pc} Path==inclusion_proof  — all agree")
     tc = consistency()
-    print(f"  consistency: {tc} verifier cases (incl. honest), MTH checks  — all agree")
+    print(f"  consistency baseline family: {tc} verifier cases (incl. honest), MTH checks  — all agree")
     tl, dl = lied_sizes()
     print(f"  lied-sizes:  {tl} boundary cases, {dl} EXPECTED divergences, all deployed-accepts-only (gap 14)")
     # pinned counts (identical generation to the paper's harness)

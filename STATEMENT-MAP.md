@@ -46,14 +46,18 @@ hypothesis, nor that no other classical argument could reach the
 conclusion on some restricted domain.
 
 Audit surface (enforced by `verification/check.sh`, exit 0 = green):
-the FULL compiled environment of the corpus modules — 218 constants,
+the FULL compiled environment of the corpus modules — 222 constants,
 read from the Lean environment by `Proofs/Inventory.lean` (fully
 qualified names, kinds, axiom cones) and pinned in
 `verification/inventory-allowlist.txt`, diffed fail-closed both
 directions on every run (round-3 replacement for the round-2 source-regex
-gate, which GPT H1 showed was evadable). The 59 human-reviewed statement
+gate, which GPT H1 showed was evadable). The 61 human-reviewed statement
 cones above are additionally checked via `#print axioms` and
 cross-checked against the inventory's independently computed cones.
+(These two counts, and the fidelity pins in the table above, are
+asserted against the allowlist/CONES/harness by check.sh Phase 3c on
+every run — stale-count drift is now a red button, not an erratum:
+review R4-1, after three consecutive rounds of hand-edit failures.)
 `verification/selftest_audit.sh` attacks the gate with nine injection
 cases (attributed/indented/private/instance declarations, a nested
 namespace reusing an audited basename, a smuggled axiom, a deleted

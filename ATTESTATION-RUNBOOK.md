@@ -52,15 +52,17 @@ Agent Appendix at the end. Every step ends in a mechanical check.
 
 ## PHASE A — do now / while waiting for the IACR decision
 
-### A1. Reviewer confirmations of round 4
-Deliver the round-4 kit (already on SD) to both reviewers. Required
-outcome, in their words: GPT-5.6's conditional approval stands with the
-round-4 evidence (its conditions 2 and 3 — recorded hashes, fresh
-button run by exit code — are satisfied by `CORPUS-MANIFEST.sha256` and
-`check-transcript.txt` in the kit); the Claude reviewer confirms F1*
-was absorbed faithfully (gap 14 + lied-size family + banner scoping).
-**Check:** two written reviews on the SD card saying so. If either
-finds anything new: run another revision round first; do not proceed.
+### A1. Reviewer confirmations of round 4 — **DONE (2026-07-15)**
+Both round-4 reviews are on the SD card. Claude reviewer: "Nothing
+blocks the freeze… no remaining findings on the corpus itself"
+(re-executed everything hostile, incl. deliberately breaking the
+lied-size tripwires — both broke the run as designed — and the first
+paper↔Lean cross-check, faithful). GPT-5.6: "Approve after minor
+documentation fixes" for an attestation SCOPED TO THE MECHANIZED MODEL
+(see the B2 wording requirement below); its principal finding (the
+deployment refinement invariant is unmechanized) is now KNOWN-GAPS
+gap 15. The round-5 housekeeping freeze addressed both reviewers'
+remaining documentation items.
 
 ### A2. The author's read (the one step only the operator can do)
 Read, in this order, against the paper's §6 and §10:
@@ -173,8 +175,24 @@ GREEN`, `exit=0`. Any other outcome: STOP (iron rule 4).
 Fresh clone of `lean-transparency-log`, driver runs once, produces:
 `entries/000012.json`, updated `latest-sth.json` (tree_size 13),
 one new line in `sth-history.jsonl`, one new receipt.
+
+**REQUIRED ATTESTATION SCOPE (round-4 GPT §11 — this wording is a gate
+condition, not a suggestion).** The leaf's human-readable claim text
+must be scoped to the mechanized model, in substance:
+
+> This corpus kernel-checks the listed theorems about the mechanized
+> recursive accumulator model. Correspondence with the deployed
+> inclusion verifier is supported by finite differential testing over
+> the pinned families. The deployed consistency verifier is not
+> extensionally equal to the model; applying the mechanized soundness
+> result to the deployed consumer flow additionally relies on an
+> unmechanized authentic-size/root invariant (KNOWN-GAPS 14/15).
+
+The leaf must NOT say or imply "the deployed verifier is formally
+verified."
 **Check:** `git status` shows exactly those four paths changed/added,
-nothing else. `pacta witness-audit` on the clone exits 0.
+nothing else. The claim text above appears in the attestation.
+`pacta witness-audit` on the clone exits 0.
 
 ### B3. Consumer's-eye check before publishing
 From a DIFFERENT directory with the old pin (size 12):

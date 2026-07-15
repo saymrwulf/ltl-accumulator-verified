@@ -26,8 +26,9 @@ PROOFS=( Basic Completeness Extract Descent Consistency Binding3 Refactor Theore
 # Certificates and their exact expected cones (observed via #print axioms,
 # never guessed; any drift in EITHER direction is a failure).
 # AUDIT SURFACE: Phase 3b pins the FULL environment of the corpus modules
-# (inventory-allowlist.txt, 218 constants incl. compiler-generated
-# auxiliaries); the 59 entries below are the human-reviewed statement
+# (inventory-allowlist.txt, every compiler-generated auxiliary included —
+# the count is pinned by the allowlist itself and asserted against the
+# docs in Phase 3c); the entries below are the human-reviewed statement
 # surface, additionally queried through #print axioms in Phase 3 and
 # cross-checked against the inventory's independently computed cones.
 declare -A CONES=(
@@ -248,6 +249,33 @@ done
 [ "$COVFAIL" = 0 ] && echo "  coverage complete: environment == allowlist, CONES cross-checked"
 [ "$COVFAIL" = 0 ] || { echo "COVERAGE FAILED"; FAIL=1; }
 [ "$FAIL" = 0 ] || exit 1
+
+# -- Phase 3c: documentation consistency (review R4-1: hand-maintained ------
+# counts went stale three rounds running — so the docs' numbers are now
+# ASSERTED against their sources: allowlist, CONES, and the fidelity pins.
+echo "=== Phase 3c: doc-consistency ==="
+DOCFAIL=0
+NALLOW=$(grep -c '^INV|' "$HERE/inventory-allowlist.txt")
+NCONES=${#CONES[@]}
+SMAP="$HERE/../STATEMENT-MAP.md"
+RDME="$HERE/../README.md"
+grep -qF "$NALLOW constants" "$SMAP" || { echo "  DOC DRIFT: STATEMENT-MAP lacks '$NALLOW constants'"; DOCFAIL=1; }
+grep -qF "$NCONES human-reviewed" "$SMAP" || { echo "  DOC DRIFT: STATEMENT-MAP lacks '$NCONES human-reviewed'"; DOCFAIL=1; }
+grep -qF "$NALLOW constants" "$RDME" || { echo "  DOC DRIFT: README lacks '$NALLOW constants'"; DOCFAIL=1; }
+grep -qF "$NCONES human-reviewed" "$RDME" || { echo "  DOC DRIFT: README lacks '$NCONES human-reviewed'"; DOCFAIL=1; }
+# fidelity pins quoted in the docs must equal the harness's pinned constants
+for n in $(python3 -c "
+import re
+src = open('$HERE/fidelity/run_fidelity.py').read()
+vals = [re.search(r'assert ti == ([0-9_]+)', src).group(1),
+        re.search(r'assert tc == ([0-9_]+)', src).group(1),
+        re.search(r'LIED_PIN_TOTAL = ([0-9_]+)', src).group(1),
+        re.search(r'LIED_PIN_DIV = ([0-9_]+)', src).group(1)]
+print(' '.join(f'{int(v.replace(chr(95),\"\")):,}' for v in vals))"); do
+  grep -qF "$n" "$SMAP" || { echo "  DOC DRIFT: STATEMENT-MAP lacks fidelity pin '$n'"; DOCFAIL=1; }
+done
+[ "$DOCFAIL" = 0 ] && echo "  docs agree with allowlist ($NALLOW), CONES ($NCONES), fidelity pins"
+[ "$DOCFAIL" = 0 ] || { echo "DOC-CONSISTENCY FAILED"; exit 1; }
 # -- Phase 4: definition fidelity (Lean defs vs deployed pacta verifiers) --
 echo "=== Phase 4: definition fidelity ==="
 PACTA_SRC="${PACTA_SRC:-$HERE/../../proof-aware-crypto-tooling-agent/src}"

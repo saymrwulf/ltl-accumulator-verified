@@ -11,14 +11,19 @@ All paper-§10 mechanization targets are kernel-checked; the audit surface
 is defined and green (`verification/check.sh`, exit 0). See
 [STATEMENT-MAP.md](STATEMENT-MAP.md) for the paper↔Lean review surface and
 [KNOWN-GAPS.md](KNOWN-GAPS.md) for the honest scope ledger.
-Revised after review round 1 (GPT-5.6 + second Claude) and round 2:
-the audit surface is now an environment-derived inventory
-(`Proofs/Inventory.lean` + pinned allowlist, self-tested by
-`selftest_audit.sh`), the review kit's fidelity target is
-self-contained, `acceptIncl` routes Theorems 1–2, fidelity families
-extended (230,271 / 230,016). No changes until the external review
-completes. The finished certificates' attestation into the LTL is a
-separate, explicitly-authorized operator decision.
+Revised across four external review rounds (GPT-5.6 + a second Claude,
+adversarial; zero broken theorems in any round; both approved after
+round 4). The audit surface is an environment-derived inventory
+(`Proofs/Inventory.lean` + pinned allowlist — 222 constants,
+61 human-reviewed cones, self-tested by `selftest_audit.sh`); the review
+kit is push-button reproducible (`run_bare.sh`, self-contained fidelity
+target); `acceptIncl`/`acceptCons_sound` route the theorems through the
+named acceptance predicates; fidelity = agreement over pinned families
+(230,271 + 230,016 baseline; 73,573 lied-size boundary cases with
+3,867 expected one-sided divergences — KNOWN-GAPS gaps 14/15, not
+extensional equality). Doc counts are asserted by check.sh Phase 3c.
+The finished certificates' attestation into the LTL is a separate,
+explicitly-authorized operator decision, scoped per the runbook.
 
 | layer | content | status |
 |---|---|---|
@@ -28,7 +33,7 @@ separate, explicitly-authorized operator decision.
 | L4 | frontier binding content (Lemma 2) | **done as specializations** — inlined in the extractor walk (`extractIncl`), whole-tree (`extractMTH`), ConsRec (`consRecBinding`); the standalone `Root` receipt-uniqueness instance was deleted with the vacuous `root_binding` in S3.5 and deliberately NOT restored (optional, unused — KNOWN-GAPS gap 3) |
 | L5 | inclusion soundness = EXPLICIT extractor `extractIncl` (Theorem 2) | **done, non-vacuous** |
 | L6a | descent extractor `extractMTH` (Theorem 3 step 3 = Lemma 2, whole-tree instance) | **done, non-vacuous** |
-| L6b | Theorem 3 (consistency soundness): `consRecBinding` (steps 1–2) + `extractCons`/`extractCons_correct` (+ `_paper` at the paper's exact quantifiers) | **done, non-vacuous** |
+| L6b | Theorem 3 (consistency soundness): `consRecBinding` (steps 1–2) + `extractCons`/`extractCons_correct` (+ `_paper` at the paper's exact quantifiers; `acceptCons_sound` routes it through the named `acceptCons` predicate, size bound derived from acceptance via `consRec_some_le`) | **done, non-vacuous** |
 | L6c | pin-store state machine safety (Proposition 1): `pinAccept_monotone`, `pin_prefix_correct`, `fork_distinct` | **done, non-vacuous** (per-step; multi-step chain = gap 7) |
 
 ## Discipline (identical to the subject corpora)
