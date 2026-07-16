@@ -28,13 +28,15 @@ them; any mismatch aborts. Filled from the round-6 rehearsal
 
 ```
 SUBJECT_COMMIT   = 172a1d0653f489d5b7cb73ac7942a57cbb496532   # corpus (round-5 freeze, reviewed r6)
-PACTA_COMMIT     = <the pacta commit containing ALL of: the round-6 parser
-                    hardening + fail-closed classifier (87ef2a1), the leaf
-                    `scope` block (d937a94), and examples/repos.yaml's
-                    ltl-accumulator-verified entry (0f5906c). The GREEN 12→13
-                    rehearsal ran at d937a9438218eea537ed47fef8c206375bd9e400;
-                    use the current pacta HEAD that contains it —
-                    re-confirm clean + suite-green on the day (B1b)>
+PACTA_CODE_BASE  = 8b1a325caaef6d3993d63d4c730eab03065e936b   # round-6-hardened
+                    producer: parser hardening + fail-closed classifier +
+                    leaf `scope` block + examples/repos.yaml entry + dead-code
+                    cleanup. The 12→13 rehearsal ran green on this producer.
+PACTA_COMMIT     = <the pacta working-tree HEAD at B2 time — MUST have
+                    `git diff PACTA_CODE_BASE HEAD -- src provider` EMPTY
+                    (producer code identical to the reviewed base; doc-only
+                    commits above it, e.g. paper/, are fine). Record the exact
+                    HEAD in the B6 evidence.>
 EXPECTED_OLD_SIZE= 12
 EXPECTED_OLD_ROOT= bcd15f9d7ea1c9e5bd0a9e64fa8d846208b1e29ee167d4f1eac19b30e6913ee9
 KEY_FINGERPRINT  = 874c8a008a607021528b2493fa1caf059f9d5c123d29193dfabc09a6d1e7a56a
