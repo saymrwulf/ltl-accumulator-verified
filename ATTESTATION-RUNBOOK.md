@@ -1,6 +1,14 @@
 # ATTESTATION RUNBOOK — entry 13 (the log attests its own machinery)
 
-Status: **Phase A: only A2 (operator read) remains. Phase B gate: A2 + explicit operator order** (the IACR decision arrived 2026-07-16 - rejected; per operator, publication no longer gates technical progress).
+Status: **COMPLETE — entry 13 appended and live, 2026-07-16.**
+Log tree 12→13; new root `3488a2d0ff9f00415bb561d61b01a420e3ca2e0f7b29351ec9ebb3f57319da0d`;
+new leaf index 12, hash `8cb258d657f1fd00baaa9e0091e26c316cb69b591cb249a9543f51cade57c50a`
+(subject ltl-accumulator-verified@172a1d0, 61/61, mechanized-model scope,
+KNOWN-GAPS 14/15). log-clone commit `1726e8e`, pushed + deployed + live-
+consumer-verified (accepted:true, ed25519:verified). Evidence on SD
+outputs/entry13-append-evidence/. This runbook is retained as the record
+of how it was done. The log now carries kernel-checked proofs of its own
+accumulator machinery.
 This file is the single authoritative ToDo for everything that happens
 between now and the appending of leaf index 12 (the 13th entry, file
 `entries/000012.json`, tree size 12 → 13). It is written to be executed
