@@ -230,7 +230,11 @@ EXPECTED_OLD_ROOT=bcd15f9d7ea1c9e5bd0a9e64fa8d846208b1e29ee167d4f1eac19b30e6913e
 ### B0. Preflight the live predecessor state (NEW — round-6 GPT §10)
 An append-only system must re-read its actual predecessor, not trust a
 Facts table. Fresh clone of `lean-transparency-log`; verify ALL of:
-- exactly `$EXPECTED_OLD_SIZE` entries under `entries/`;
+- exactly `$EXPECTED_OLD_SIZE` NUMBERED leaves `entries/[0-9]*.json`
+  (NOT `ls entries/ | wc -l` — `entries/` also holds per-component
+  `<component>.attestation.json` convenience pointers; the live log has
+  12 numbered leaves + 4 named pointers = 16 files. The tree size is the
+  numbered count and the STH's `tree_size`, never the file count);
 - `latest-sth.json` tree_size == `$EXPECTED_OLD_SIZE`;
 - its full `root_hash` == `$EXPECTED_OLD_ROOT`;
 - the STH signature verifies under `provider.ed25519.pub`
@@ -316,19 +320,33 @@ Any failure: STOP (do not append a leaf you could not inspect).
 with the inspected candidate; then `log-publish --git-dir <B0's log
 clone>`. Produces `entries/000012.json`, updated `latest-sth.json`
 (tree_size 13), one new `sth-history.jsonl` line, one new receipt.
-**Check (exact-path + prefix immutability — round-6 GPT §11):** the
-publish clone's `git status` shows EXACTLY:
+**Check (exact-path + prefix immutability — corrected empirically on
+the live-state clone 2026-07-16; the round-6 "exactly 4 paths" was
+WRONG — `publish` regenerates every component's inclusion-proof receipt
+against the NEW head, which is correct CT behavior, not tampering):**
+the publish clone's `git status --porcelain` shows EXACTLY these, and
+nothing else:
 ```
-entries/000012.json           (new)
-latest-sth.json               (modified)
-sth-history.jsonl             (modified)
-receipts/<exact-name>         (new)
+?? entries/000012.json                              # the new leaf
+?? entries/ltl-accumulator-verified.attestation.json # new component pointer
+?? receipts/ltl-accumulator-verified.receipt.json    # new component receipt
+ M latest-sth.json                                   # tree_size 12→13
+ M sth-history.jsonl                                 # one line appended
+ M receipts/anza-ed25519-verified.receipt.json       # ) inclusion proofs
+ M receipts/betrusted-ed25519-verified.receipt.json  # ) recomputed vs the
+ M receipts/dalek-ed25519-verified.receipt.json      # ) size-13 head —
+ M receipts/risc0-ed25519-verified.receipt.json      # ) EXPECTED, correct
 ```
-and nothing else; `entries/000000.json`..`000011.json` byte-identical
-to the pre-run clone; all prior `sth-history.jsonl` lines unchanged
-with exactly one line appended; the new head's root == the root the
-append computed; `pacta witness-audit` on the clone exits 0 (real key —
-full history verifies).
+INVARIANTS (any violation = STOP):
+- `entries/000000.json`..`000011.json` byte-identical to the pre-run clone;
+- the 4 existing `entries/<component>.attestation.json` byte-identical
+  (their attestation content is stable; only receipts move with the head);
+- `provider.ed25519.pub` UNCHANGED (the real key is the same key — if this
+  shows M, the WRONG key signed: STOP);
+- `sth-history.jsonl`: all prior lines unchanged, exactly one appended;
+- the new head's root == the root the append computed;
+- `pacta witness-audit` on the clone exits 0 (real key — full history,
+  incl. every historical STH signature, verifies).
 
 ### B3b. Consumer's-eye 12→13 (round-6: independent pin advance)
 From a DIFFERENT directory holding the OLD pin (size 12, root
