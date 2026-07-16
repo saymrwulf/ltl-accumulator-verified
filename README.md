@@ -8,9 +8,11 @@ the same discipline as the four `*-ed25519-verified` subject corpora.
 ## Status: **ATTESTED — LTL entry 13, live (2026-07-16)**
 
 This corpus is now itself a leaf of the log it describes. It was appended
-as **entry 13** of the Lean Transparency Log (freeze `172a1d0`), making
-the log the first deployed transparency log to carry kernel-checked
-proofs of its own accumulator machinery. Live head after the append:
+as **entry 13** of the Lean Transparency Log (freeze `172a1d0`), so the
+log carries kernel-checked proofs *about the accumulator model*
+underlying its own inclusion and consistency reasoning (a deployment we
+are unaware of a precedent for; scoped to the mechanized model, not the
+deployed verifier — see below). Live head after the append:
 tree size **13**, root
 `3488a2d0ff9f00415bb561d61b01a420e3ca2e0f7b29351ec9ebb3f57319da0d`; this
 corpus is leaf index 12, hash
