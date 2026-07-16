@@ -14,11 +14,31 @@ Agent Appendix at the end. Every step ends in a mechanical check.
 | term | meaning |
 |---|---|
 | **operator** | The human running the log service (owner of ltl.zkdefi.org and its keys). NOT warden (warden is a consumer). All Phase-B actions are operator actions. |
-| **corpus** | `ltl-accumulator-verified` at freeze commit `2da0a79` — the kernel-checked mechanization of paper §6. |
+| **corpus** | `ltl-accumulator-verified` at freeze commit `172a1d0` (round-5 freeze — the reviewed subject; supersedes the earlier `2da0a79`) — the kernel-checked mechanization of paper §6. |
 | **the button** | `verification/check.sh`. Green means: printed `=== ATTESTATION GREEN (Lean + fidelity) ===` AND `echo $?` printed `0`. BOTH. Never judge from scrolled output. |
 | **the log** | Live service ltl.zkdefi.org + public mirror repo `lean-transparency-log`. Currently 12 leaves (indices 0–11), head root `bcd15f9d…`, FROZEN. |
 | **entry 13** | The next leaf: the attestation of the corpus itself. Does not exist yet. |
-| **kit round N** | The review package delivered to the external reviewers after freeze N. Round-1 kit = freeze `6e56414`; round 2 = `260ad64`; round 3 = `9972ab4`; round 4 = `2da0a79` (current). |
+| **kit round N** | The review package delivered to the external reviewers after freeze N. Round-1 kit = freeze `6e56414`; round 2 = `260ad64`; round 3 = `9972ab4`; round 4 = `2da0a79`; round 5 = `172a1d0`; round 6 = review of `172a1d0` + pacta producer (current). |
+
+## 2a. Release tuple (the single source of immutable identifiers)
+
+Phase B binds THESE exact identifiers. Every Phase-B command consumes
+them; any mismatch aborts. Filled from the round-6 rehearsal
+(2026-07-16); re-confirm each on the day (B0).
+
+```
+SUBJECT_COMMIT   = 172a1d0653f489d5b7cb73ac7942a57cbb496532   # corpus (round-5 freeze, reviewed r6)
+PACTA_COMMIT     = <the pacta commit containing BOTH the round-6 parser hardening
+                    AND examples/repos.yaml's ltl-accumulator-verified entry;
+                    at rehearsal time HEAD was 87ef2a1 — re-confirm on the day>
+EXPECTED_OLD_SIZE= 12
+EXPECTED_OLD_ROOT= bcd15f9d7ea1c9e5bd0a9e64fa8d846208b1e29ee167d4f1eac19b30e6913ee9
+KEY_FINGERPRINT  = 874c8a008a607021528b2493fa1caf059f9d5c123d29193dfabc09a6d1e7a56a
+CONFIG           = pacta examples/repos.yaml, entry ltl-accumulator-verified (record its sha256 in B0)
+NEW_INDEX        = 12   (the 13th leaf)
+NEW_SIZE         = 13
+```
+
 
 ## 1. Iron rules (violating any of these is never correct)
 
@@ -38,10 +58,10 @@ Agent Appendix at the end. Every step ends in a mechanical check.
 
 | artifact | where | state |
 |---|---|---|
-| corpus | github.com/saymrwulf/ltl-accumulator-verified | `2da0a79`, pushed, working tree clean |
+| corpus | github.com/saymrwulf/ltl-accumulator-verified | **`172a1d0`** (round-5 freeze; = SUBJECT_COMMIT §2a), pushed, clean. `2da0a79` was the round-4 freeze — superseded. |
 | review kit round 4 | SD `outputs/accumulator-review-kit-round4/` | delivered (corpus tarball sha `2963acbb…`, per-file `CORPUS-MANIFEST.sha256`) |
 | log mirror repo | github.com/saymrwulf/lean-transparency-log | `ec12dda` (12 leaves; unchanged since paper submission) |
-| pacta | github.com/saymrwulf/proof-aware-crypto-tooling-agent | `3d81d53` (change-frozen during paper processing) |
+| pacta (producer) | github.com/saymrwulf/proof-aware-crypto-tooling-agent | change-freeze LIFTED 2026-07-16 (IACR decided). Producer for entry 13 = `PACTA_COMMIT` (§2a): the commit carrying the round-6 parser hardening + fail-closed classifier + leaf `scope` block + `examples/repos.yaml` entry. NOT the old `3d81d53`. |
 | Forgejo mirrors | `https://zkdefi.org/saymrwulf/<repo>.git` (anonymously readable) | pull-synced by server cron nightly 03:00 UTC (`/home/admin/cloud/bin/reconcile-mirrors.py`, log `.reconcile.log`); verify per step A5 |
 | log public key | `lean-transparency-log/provider.ed25519.pub` (PEM) | fingerprint `874c8a00…a56a` in `log-metadata.json` |
 | log PRIVATE key | **RESOLVED 2026-07-12**: laptop-side, mode 0600, inside a gitignored state dir of the pacta working tree (exact path in operator-private notes, deliberately not in this public file); public half byte-matches `provider.ed25519.pub`. NOT on the droplet. **No second copy exists** — see step A3b | A3 done; A3b done (operator, 2026-07-14) |
@@ -68,7 +88,11 @@ remaining documentation items.
 Read, in this order, against the paper's §6 and §10:
 1. `STATEMENT-MAP.md` — every row: does the Lean statement say what
    the paper's item says?
-2. `KNOWN-GAPS.md` — all 14 entries: is each acceptable to publish?
+2. `KNOWN-GAPS.md` — all **15** entries (confirm the count on the day:
+   `grep -cE '^[0-9]+\.' KNOWN-GAPS.md` → 15): is each acceptable to
+   publish? Gap 15 (deployment refinement invariant unmechanized) is
+   the one that most constrains the leaf's claim — read it last and
+   deliberately.
 No proofs need reading; the kernel checked those. Budget one evening.
 **Check:** operator writes one line — "statement map and gaps read and
 accepted, <date>" — into the SD card notes (NOT into a repo, to keep
@@ -93,51 +117,55 @@ openssl pkey -in <CANDIDATE_PRIVATE_KEY> -pubout \
 operator's private notes (never in git). Do not copy the key anywhere,
 do not print it, do not change its permissions.
 
-### A4. Rehearse and document the append invocation — **DONE (2026-07-16)**
-Rehearsed end-to-end with a THROWAWAY key + THROWAWAY log (no real key
-touched; throwaway state destroyed afterward; transcript on SD:
-`entry13-rehearsal-transcript_20260716-1108_0e1dfcd3.txt`):
-`pacta_provider check` (full corpus compile via lean-guard + 61-cone
-audit — **61/61 proven, 61/61 clean, byte-exact against CONES**) →
-`log-init` → `log-append` (head signed) → `log-publish` →
-`pacta witness-audit` ok. The rehearsal caught and fixed two real
-defects first: the config REQUIRES `axiom_imports` (the nine Proofs.*
-modules — without them the generated audit file has no imports and
-lean-guard rejects it), and a pacta parser bug that mis-attributed
-cones to axiom-free certificates (fixed + regression-tested, pacta
-`34a0457`; the accumulator is the first subject with axiom-free
-certificates). The real invocation's config is now version-controlled:
-**pacta `examples/repos.yaml`, entry `ltl-accumulator-verified`**
-(61 certificates with per-cert cones, the nine axiom_imports, and
-`known_status` carrying the REQUIRED B2 scoped-attestation wording).
-The real B-phase run differs from the rehearsal only in: real key/pub
-paths (A3 notes), `--log-dir provider/state/transparency-log-main`,
-and `log-publish --git-dir <lean-transparency-log clone>`.
+### A4. Structural 12→13 rehearsal — **DONE (round 6, 2026-07-16)**
+The first A4 rehearsal (a one-leaf log from scratch) was rejected by
+round-6 review: it exercised the invocation but NOT the 12→13
+transition. Redone as a structural 12→13 rehearsal (GPT Method B:
+throwaway key on a disposable COPY of the real operational state).
+Transcript on SD (`entry13-rehearsal-12to13_20260716-…_e1a15aab.txt`),
+throwaway state destroyed. Verified end to end:
+- disposable copy of `provider/state/transparency-log-main` roots to
+  `bcd15f9d…` == live (the real append base);
+- candidate from the clean-room subject `172a1d0` + pinned producer:
+  61/61 proven+clean, and the **scoped wording is IN THE LEAF's `scope`
+  block** (subject/certs/scope all inspected — this is the B2b gate,
+  rehearsed);
+- append 12→13 → tree_size 13, leaf index 12;
+- prefix immutability: entries 0..11 byte-identical to the predecessor;
+- consistency 12→13 accepted by BOTH the deployed verifier AND the
+  mechanized model.
 
-#### (original A4 text, for reference)
-(revised 2026-07-12)
-Correction to this runbook's first version: the producer driver is NOT
-lost session work — it is the committed `pacta_provider` CLI in pacta's
-`provider/` tree (`check` emits the signed attestation; `log-append`
-appends the leaf and signs the new head via `make_signed_tree_head`,
-using the verified-dalek-serial dogfood signer; `log-publish` exports
-the public face that `lean-transparency-log` and the droplet's
-`published/` carry; `serve` never touches keys). Leaves 8–11 were
-produced exactly this way. What was never persisted is only the
-per-run orchestration (the loop + flags).
+Three real defects were found and fixed by this rehearsal before it
+went green:
+1. reconstructing the tree from the published `leaf` projections gives
+   the WRONG root — the append base must be the operational state
+   (`provider/state/transparency-log-main`), not `published/`. Now B0
+   checks exactly this.
+2. pacta axiom parser mis-attributed cones to axiom-free certificates
+   and matched names by substring (the accumulator is the first subject
+   with axiom-free certs) — fixed + record-scoped + fail-closed
+   classification (pacta round-6 hardening; 6 regression tests).
+3. the attestation LEAF did not carry its scope block at all — the
+   scoped wording reached only the claim card. Fixed: `build_attestation`
+   now emits `scope` (guarantees/exclusions/deployment_constraints).
 
-To do before the IACR decision arrives:
-1. Write down, in operator-private notes, the exact `pacta_provider
-   check` / `log-append` / `log-publish` invocation for the subject
-   `ltl-accumulator-verified @ 2da0a79` (flags per the leaves-8–11
-   pattern; key/pub paths from A3's notes).
-2. Rehearse it against a THROWAWAY copy of the log state.
-**Check (rehearsal, throwaway copy only):** `pacta witness-audit` on
-the throwaway export exits 0 — every prefix root recomputed, every
-historical STH + signature verified, including the new one. The
-throwaway copy is then DELETED (its head was signed with the real key
-over a rehearsal tree — it must never be published or retained; if
-retention is wanted for study, rehearse with a throwaway KEY instead).
+Version-controlled artifacts for the real run: pacta
+`examples/repos.yaml` entry `ltl-accumulator-verified` (61 certs w/
+per-cert cones, nine `axiom_imports`, `known_status` = the scoped
+wording), plus the round-6 pacta commit (`PACTA_COMMIT`, §2a). The real
+B-phase run differs only in: real key/pub paths (A3 notes),
+`--log-dir provider/state/transparency-log-main`, `log-publish
+--git-dir <lean-transparency-log clone>`, and — the one thing the
+rehearsal could NOT do under a throwaway key — full-history
+witness-audit under the PRODUCTION key (that is B0 + B3's job).
+
+Background (retained): the producer driver was never lost session work
+— it is the committed `pacta_provider` CLI (`check` → signed
+attestation; `log-append` → leaf + head via `make_signed_tree_head`,
+verified-dalek-serial signer; `log-publish` → public face; `serve`
+keyless). Leaves 8–11 were produced this way; only the per-run
+orchestration was ephemeral, and it is now the version-controlled
+`examples/repos.yaml` entry + this runbook's B-steps.
 
 ### A3b. Back up the signing key — **DONE (operator, confirmed 2026-07-14)**
 Completed by the operator; the procedure below is retained as the
@@ -174,33 +202,91 @@ server cron needs attention (`/home/admin/cloud/.reconcile.log`).
 
 ## PHASE B — the append (BLOCKED until the gate below is fully open)
 
-**GATE — all five, no exceptions, no substitutions:**
+**GATE — all six, no exceptions, no substitutions:**
 - [ ] A1 done (both reviewers confirmed, in writing, on SD)
-- [ ] A2 done (author read, dated note)
-- [ ] A3 done (KEY CONFIRMED)
-- [ ] A4 done (driver committed + rehearsal witness-audit exit 0)
-- [ ] The IACR decision has arrived AND the operator has given an
-      explicit, fresh order to append — in words, on that day.
-      A past "we'll do it after acceptance" does NOT count.
+- [ ] A2 done (author read of all **15** KNOWN-GAPS entries, dated note)
+- [ ] A3 done (KEY CONFIRMED) + A3b (encrypted backup)
+- [ ] A4 done (structural **12→13** rehearsal green — round 6)
+- [ ] B0 passed on the day (live predecessor state re-verified)
+- [ ] The operator has given an explicit, fresh order to append — in
+      words, on that day. A past intention does NOT count. (The IACR
+      decision arrived 2026-07-16, rejected; per operator it no longer
+      gates — so this reduces to the fresh order.)
+
+Set the release tuple (§2a) into the shell first; every step reads it:
+```
+SUBJECT_COMMIT=172a1d0653f489d5b7cb73ac7942a57cbb496532
+PACTA_COMMIT=<pacta commit with the round-6 hardening + repos.yaml entry>
+EXPECTED_OLD_SIZE=12
+EXPECTED_OLD_ROOT=bcd15f9d7ea1c9e5bd0a9e64fa8d846208b1e29ee167d4f1eac19b30e6913ee9
+```
+
+### B0. Preflight the live predecessor state (NEW — round-6 GPT §10)
+An append-only system must re-read its actual predecessor, not trust a
+Facts table. Fresh clone of `lean-transparency-log`; verify ALL of:
+- exactly `$EXPECTED_OLD_SIZE` entries under `entries/`;
+- `latest-sth.json` tree_size == `$EXPECTED_OLD_SIZE`;
+- its full `root_hash` == `$EXPECTED_OLD_ROOT`;
+- the STH signature verifies under `provider.ed25519.pub`
+  (fingerprint == `KEY_FINGERPRINT`);
+- `pacta witness-audit --published-dir <clone>` exits 0 (every prefix
+  root + every historical STH signature — real key, so this passes here
+  where the rehearsal could not);
+- live service agrees: `curl -s https://ltl.zkdefi.org/v1/sth` returns
+  the same size and root;
+- GitHub mirror head == local clone head;
+- the operator's operational state
+  (`provider/state/transparency-log-main`) has `$EXPECTED_OLD_SIZE`
+  entries and roots to `$EXPECTED_OLD_ROOT` (this IS the append base —
+  NOT a reconstruction from the published `leaf` projections, which do
+  NOT rebuild the tree; the round-6 rehearsal proved that trap);
+- no partial entry 13 exists anywhere (no `entries/000012.json`, no
+  size-13 head).
+**Check:** every bullet true. Any mismatch: STOP.
 
 ### B1. Clean-room re-verification of the subject
 ```
 git clone https://github.com/saymrwulf/ltl-accumulator-verified /tmp/attest-13
-cd /tmp/attest-13 && git checkout 2da0a79
+cd /tmp/attest-13 && git checkout $SUBJECT_COMMIT
+test -z "$(git status --porcelain)"        # clean tree
 cd verification && ./check.sh ; echo "exit=$?"
 ```
-**Check:** prints `=== ATTESTATION GREEN (Lean + fidelity) ===` and
-`exit=0`. Then `./selftest_audit.sh ; echo "exit=$?"` → `SELF-TEST
-GREEN`, `exit=0`. Any other outcome: STOP (iron rule 4).
+**Check:** clean tree; prints `=== ATTESTATION GREEN (Lean + fidelity)
+===` and `exit=0`. Then `./selftest_audit.sh ; echo "exit=$?"` →
+`SELF-TEST GREEN`, `exit=0`. Archive the check transcript; record its
+sha256 (bound into evidence per B6). Any other outcome: STOP.
 
-### B2. Run the driver (from A4) against the REAL log repo clone
-Fresh clone of `lean-transparency-log`, driver runs once, produces:
-`entries/000012.json`, updated `latest-sth.json` (tree_size 13),
-one new line in `sth-history.jsonl`, one new receipt.
+### B1b. Pin the producer (NEW — round-6 GPT §4)
+The leaf is generated by pacta; pin the exact producer:
+```
+git clone https://github.com/saymrwulf/proof-aware-crypto-tooling-agent /tmp/pacta-13
+cd /tmp/pacta-13 && git checkout $PACTA_COMMIT
+test -z "$(git status --porcelain)"
+python3 scripts/mini_pytest.py    # require the full green count
+```
+**Check:** clean tree; suite all-green. This is the ONLY pacta used
+for B2. Do not run the ambient working tree.
 
-**REQUIRED ATTESTATION SCOPE (round-4 GPT §11 — this wording is a gate
-condition, not a suggestion).** The leaf's human-readable claim text
-must be scoped to the mechanized model, in substance:
+### B2. Generate the candidate attestation (do NOT append yet)
+Using the pinned producer (`/tmp/pacta-13`) and its
+`examples/repos.yaml` entry `ltl-accumulator-verified`, run
+`pacta_provider check` against the clean-room subject `/tmp/attest-13`
+(A4's rehearsed invocation, real key/pub from A3's notes), writing an
+UNSIGNED-inspection candidate first.
+
+### B2b. Candidate-leaf inspection gate (NEW — round-6 GPT §5, both reviewers)
+Before any append, mechanically require of the generated attestation:
+- `subject.component == ltl-accumulator-verified`
+- `subject.repo_url ==` the expected URL
+- `subject.repo_commit == $SUBJECT_COMMIT` (FULL sha)
+- 61 certificates; all `status == proven`; all `axiom_status == clean`
+- `scope.deployment_constraints` contains the REQUIRED scoped wording
+  (below) and does NOT contain "deployed verifier is formally verified"
+- `scope.exclusions` contains the boundary exclusions (SHA-256 CR,
+  gaps 14/15, gap 4)
+
+REQUIRED ATTESTATION SCOPE (round-4 GPT §11; now carried by the LEAF's
+`scope` block — round-6 fix — not merely the claim card):
 
 > This corpus kernel-checks the listed theorems about the mechanized
 > recursive accumulator model. Correspondence with the deployed
@@ -210,47 +296,75 @@ must be scoped to the mechanized model, in substance:
 > result to the deployed consumer flow additionally relies on an
 > unmechanized authentic-size/root invariant (KNOWN-GAPS 14/15).
 
-The leaf must NOT say or imply "the deployed verifier is formally
-verified."
-**Check:** `git status` shows exactly those four paths changed/added,
-nothing else. The claim text above appears in the attestation.
-`pacta witness-audit` on the clone exits 0.
+**Check:** all assertions pass; record the unsigned-candidate sha256.
+Any failure: STOP (do not append a leaf you could not inspect).
 
-### B3. Consumer's-eye check before publishing
-From a DIFFERENT directory with the old pin (size 12):
-`pacta sth-refresh` against the local clone (or after B4, the live
-URL) must verify the signature, verify consistency 12 → 13, and
-advance the pin. **Check:** exit 0, pin now 13. This exercises the
-exact theorems of the corpus one last time, on the real data.
+### B3. Append 12→13 against the operational state
+`pacta_provider log-append --log-dir provider/state/transparency-log-main`
+with the inspected candidate; then `log-publish --git-dir <B0's log
+clone>`. Produces `entries/000012.json`, updated `latest-sth.json`
+(tree_size 13), one new `sth-history.jsonl` line, one new receipt.
+**Check (exact-path + prefix immutability — round-6 GPT §11):** the
+publish clone's `git status` shows EXACTLY:
+```
+entries/000012.json           (new)
+latest-sth.json               (modified)
+sth-history.jsonl             (modified)
+receipts/<exact-name>         (new)
+```
+and nothing else; `entries/000000.json`..`000011.json` byte-identical
+to the pre-run clone; all prior `sth-history.jsonl` lines unchanged
+with exactly one line appended; the new head's root == the root the
+append computed; `pacta witness-audit` on the clone exits 0 (real key —
+full history verifies).
 
-### B4. Publish
+### B3c. Consumer's-eye 12→13 (round-6: independent pin advance)
+From a DIFFERENT directory holding the OLD pin (size 12, root
+`$EXPECTED_OLD_ROOT`): `pacta sth-refresh` against the clone must
+verify the new head signature, verify consistency 12→13, and advance
+the pin to 13. **Check:** exit 0, pin now 13.
+
+### B4. Publish (the single irreversible step)
 The droplet serves the log from a DERIVED dir (`~/cloud/ltl/log`),
 rebuilt from a content mirror (`~/cloud/ltl/published`) — a bare
-`git pull` in `app/` is NOT enough (see PersonalCloudServer DEPLOY.md
-§ "The LTL service" for the layout).
+`git pull` in `app/` is NOT enough (PersonalCloudServer DEPLOY.md
+§ "The LTL service").
 ```
-cd <log clone> && git add -A && git commit -m "log update: leaf 12 - attestation of ltl-accumulator-verified@2da0a79 (paper §6 mechanization)" && git push origin main
+cd <log clone> && git add -A && git commit -m "log update: leaf 12 - attestation of ltl-accumulator-verified@$SUBJECT_COMMIT (mechanized-model scope; KNOWN-GAPS 14/15)" && git push origin main
 ssh admin@zkdefi.org
-  cd ~/cloud/ltl/app && git pull                          # code/paper (usually no-op here)
-  # refresh published/ with the new log content, e.g.:
+  cd ~/cloud/ltl/app && git pull                          # code/paper (usually no-op)
   git clone --depth 1 https://github.com/saymrwulf/lean-transparency-log /tmp/ltl-pub \
     && rsync -a --exclude .git /tmp/ltl-pub/ ~/cloud/ltl/published/ && rm -rf /tmp/ltl-pub
   cd ~/cloud/ltl && python3 reconstruct.py                # re-derive log/
   cd ~/cloud && docker compose restart ltl
 ```
 **Check:** `curl -s https://ltl.zkdefi.org/v1/sth` returns
-`"tree_size": 13` and the same root the driver computed.
+`"tree_size": 13` and the same root the append computed. This is the
+first and only irreversible action; everything before it was on
+disposable clones.
 
 ### B5. Live end-to-end verification
 `pacta log-fetch` + `pacta receipt-verify` for the new entry against
 the live service; `pacta sth-refresh` from a size-12 pin against the
 live URL. **Check:** all exit 0.
 
-### B6. Mirrors and archive
+### B6. Mirrors and archive (bind the evidence — round-6 GPT §7/§8)
 Forgejo picks the push up on the nightly cron (or trigger manually per
-A5); verify head equality. Copy the new leaf, STH, and receipt to the
-SD card under `outputs/` with the standing `_<timestamp>_<hash8>`
-naming. **Check:** SD hashes match the repo files.
+A5); verify head equality. To the SD card under `outputs/` with the
+standing `_<timestamp>_<hash8>` naming, archive a SANITIZED run record
+(NO private key material) containing at least:
+```
+subject_commit, pacta_commit, config_sha256,
+unsigned_candidate_sha256, B1_check_transcript_sha256 + marker + exit,
+fidelity pins (230271/230016/73573/3867),
+old_size/old_root, new_index/new_size/new_root, new_leaf_hash,
+STH signature status, receipt verification, 12→13 consistency result,
+witness_audit result, consumer pin 12→13.
+```
+Plus the new leaf, STH, and receipt themselves. **Check:** SD hashes
+match the repo files; the record names the exact B1 fidelity-evidence
+digest (so the leaf's "finite differential testing" clause points at a
+concrete object, not an unbound assertion).
 
 ### B7. Aftermath (same day)
 - Update the paper's camera-ready wording per the queued list (Lemma-2
