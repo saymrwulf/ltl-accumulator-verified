@@ -1,6 +1,6 @@
 # ATTESTATION RUNBOOK — entry 13 (the log attests its own machinery)
 
-Status: **Phase A open, Phase B BLOCKED** (see gate at Phase B).
+Status: **Phase A: only A2 (operator read) remains. Phase B gate: A2 + explicit operator order** (the IACR decision arrived 2026-07-16 - rejected; per operator, publication no longer gates technical progress).
 This file is the single authoritative ToDo for everything that happens
 between now and the appending of leaf index 12 (the 13th entry, file
 `entries/000012.json`, tree size 12 → 13). It is written to be executed
@@ -93,7 +93,29 @@ openssl pkey -in <CANDIDATE_PRIVATE_KEY> -pubout \
 operator's private notes (never in git). Do not copy the key anywhere,
 do not print it, do not change its permissions.
 
-### A4. Rehearse and document the append invocation (revised 2026-07-12)
+### A4. Rehearse and document the append invocation — **DONE (2026-07-16)**
+Rehearsed end-to-end with a THROWAWAY key + THROWAWAY log (no real key
+touched; throwaway state destroyed afterward; transcript on SD:
+`entry13-rehearsal-transcript_20260716-1108_0e1dfcd3.txt`):
+`pacta_provider check` (full corpus compile via lean-guard + 61-cone
+audit — **61/61 proven, 61/61 clean, byte-exact against CONES**) →
+`log-init` → `log-append` (head signed) → `log-publish` →
+`pacta witness-audit` ok. The rehearsal caught and fixed two real
+defects first: the config REQUIRES `axiom_imports` (the nine Proofs.*
+modules — without them the generated audit file has no imports and
+lean-guard rejects it), and a pacta parser bug that mis-attributed
+cones to axiom-free certificates (fixed + regression-tested, pacta
+`34a0457`; the accumulator is the first subject with axiom-free
+certificates). The real invocation's config is now version-controlled:
+**pacta `examples/repos.yaml`, entry `ltl-accumulator-verified`**
+(61 certificates with per-cert cones, the nine axiom_imports, and
+`known_status` carrying the REQUIRED B2 scoped-attestation wording).
+The real B-phase run differs from the rehearsal only in: real key/pub
+paths (A3 notes), `--log-dir provider/state/transparency-log-main`,
+and `log-publish --git-dir <lean-transparency-log clone>`.
+
+#### (original A4 text, for reference)
+(revised 2026-07-12)
 Correction to this runbook's first version: the producer driver is NOT
 lost session work — it is the committed `pacta_provider` CLI in pacta's
 `provider/` tree (`check` emits the signed attestation; `log-append`
