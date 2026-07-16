@@ -1,10 +1,12 @@
 # Optimistic by construction: what the LTL holds, and what it shares with rollups
 
-Status: essay / parked blog-post source. Per the operator's decision,
-the blog version publishes only AFTER entry 13 is live (runbook B7),
-when the closing claim — "the log carries kernel-checked proofs of its
-own machinery" — becomes literally true and the post can end with a
-link to a live leaf the reader can verify in one command.
+Status: published. The condensed blog version is live at
+blog.zkdefi.org ("The log notarizes itself — entry 13", 2026-07-16),
+and the closing claim — "the log carries kernel-checked proofs of its
+own machinery" — is now literally true: entry 13 (leaf index 12, hash
+`8cb258d6…`, subject `ltl-accumulator-verified@172a1d0`) is live under
+head `tree size 13, root 3488a2d0…`, verifiable at
+ltl.zkdefi.org/v1/sth. This essay remains the long-form source.
 
 ---
 
@@ -112,8 +114,8 @@ loop that optimistic rollups themselves aspire to and largely lack:
 say precisely "this fraud-proof system cannot fail to convict" — any
 accepted rewrite yields the collision, constructively. Production
 rollups would love a kernel-checked proof of their fault-proof
-interpreters; this log will carry one for its own — inside the very
-ledger it protects.
+interpreters; this log carries one for its own — entry 13, inside the
+very ledger it protects.
 
 ## Pointers (for the eventual blog rendering)
 
