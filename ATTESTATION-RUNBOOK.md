@@ -28,9 +28,13 @@ them; any mismatch aborts. Filled from the round-6 rehearsal
 
 ```
 SUBJECT_COMMIT   = 172a1d0653f489d5b7cb73ac7942a57cbb496532   # corpus (round-5 freeze, reviewed r6)
-PACTA_COMMIT     = <the pacta commit containing BOTH the round-6 parser hardening
-                    AND examples/repos.yaml's ltl-accumulator-verified entry;
-                    at rehearsal time HEAD was 87ef2a1 — re-confirm on the day>
+PACTA_COMMIT     = <the pacta commit containing ALL of: the round-6 parser
+                    hardening + fail-closed classifier (87ef2a1), the leaf
+                    `scope` block (d937a94), and examples/repos.yaml's
+                    ltl-accumulator-verified entry (0f5906c). The GREEN 12→13
+                    rehearsal ran at d937a9438218eea537ed47fef8c206375bd9e400;
+                    use the current pacta HEAD that contains it —
+                    re-confirm clean + suite-green on the day (B1b)>
 EXPECTED_OLD_SIZE= 12
 EXPECTED_OLD_ROOT= bcd15f9d7ea1c9e5bd0a9e64fa8d846208b1e29ee167d4f1eac19b30e6913ee9
 KEY_FINGERPRINT  = 874c8a008a607021528b2493fa1caf059f9d5c123d29193dfabc09a6d1e7a56a
@@ -54,23 +58,23 @@ NEW_SIZE         = 13
    pass." A failed check means the run is over.
 5. IACR/editor correspondence never enters any git repo (SD card only).
 
-## 2. Facts (as of 2026-07-12, round-4 freeze)
+## 2. Facts (as of 2026-07-16, post round-6)
 
 | artifact | where | state |
 |---|---|---|
 | corpus | github.com/saymrwulf/ltl-accumulator-verified | **`172a1d0`** (round-5 freeze; = SUBJECT_COMMIT §2a), pushed, clean. `2da0a79` was the round-4 freeze — superseded. |
-| review kit round 4 | SD `outputs/accumulator-review-kit-round4/` | delivered (corpus tarball sha `2963acbb…`, per-file `CORPUS-MANIFEST.sha256`) |
+| review kits | SD `outputs/accumulator-review-kit-round{2..6}/` | round 6 (pre-attestation sign-off) delivered 2026-07-16; corpus tarball `18fbd697…` + `CORPUS-MANIFEST.sha256` |
 | log mirror repo | github.com/saymrwulf/lean-transparency-log | `ec12dda` (12 leaves; unchanged since paper submission) |
 | pacta (producer) | github.com/saymrwulf/proof-aware-crypto-tooling-agent | change-freeze LIFTED 2026-07-16 (IACR decided). Producer for entry 13 = `PACTA_COMMIT` (§2a): the commit carrying the round-6 parser hardening + fail-closed classifier + leaf `scope` block + `examples/repos.yaml` entry. NOT the old `3d81d53`. |
 | Forgejo mirrors | `https://zkdefi.org/saymrwulf/<repo>.git` (anonymously readable) | pull-synced by server cron nightly 03:00 UTC (`/home/admin/cloud/bin/reconcile-mirrors.py`, log `.reconcile.log`); verify per step A5 |
 | log public key | `lean-transparency-log/provider.ed25519.pub` (PEM) | fingerprint `874c8a00…a56a` in `log-metadata.json` |
-| log PRIVATE key | **RESOLVED 2026-07-12**: laptop-side, mode 0600, inside a gitignored state dir of the pacta working tree (exact path in operator-private notes, deliberately not in this public file); public half byte-matches `provider.ed25519.pub`. NOT on the droplet. **No second copy exists** — see step A3b | A3 done; A3b done (operator, 2026-07-14) |
+| log PRIVATE key | **RESOLVED 2026-07-12**: laptop-side, mode 0600, inside a gitignored state dir of the pacta working tree (exact path in operator-private notes, deliberately not in this public file); public half byte-matches `provider.ed25519.pub`. NOT on the droplet. encrypted SD backup exists (A3b, operator, 2026-07-14) | A3 done; A3b done |
 | producer driver | **RESOLVED 2026-07-12**: it exists and is committed — pacta's `provider/` CLI (`python3 -m pacta_provider`: `check` → signed attestation; `log-append` → leaf + signed STH + receipt; `log-publish` → public face). Heads are signed with `signing_backend: verified-dalek-serial` (the dogfooded verified signer), `self_inclusion: verified`. Only the per-run orchestration was session work | see step A4 (rehearsal, not reconstruction) |
 | server deployment | private repo `PersonalCloudServer` (github, `master`) — since `a186bac` includes the ltl vhost/service/reconstruct.py, md5-verified == droplet | see its `DEPLOY.md` § "The LTL service" |
 
 ---
 
-## PHASE A — do now / while waiting for the IACR decision
+## PHASE A — preparation (complete except A2)
 
 ### A1. Reviewer confirmations of round 4 — **DONE (2026-07-15)**
 Both round-4 reviews are on the SD card. Claude reviewer: "Nothing
@@ -137,10 +141,12 @@ throwaway state destroyed. Verified end to end:
 
 Three real defects were found and fixed by this rehearsal before it
 went green:
-1. reconstructing the tree from the published `leaf` projections gives
-   the WRONG root — the append base must be the operational state
-   (`provider/state/transparency-log-main`), not `published/`. Now B0
-   checks exactly this.
+1. re-APPENDING published entries double-wraps them (`log-append`
+   wraps its input; published `leaf` fields are already wrapped) —
+   wrong root. The published face itself rebuilds the tree fine; the
+   append base must nonetheless be the operational state
+   (`provider/state/transparency-log-main`), which stores unwrapped
+   attestations. Now B0 checks exactly this.
 2. pacta axiom parser mis-attributed cones to axiom-free certificates
    and matched names by substring (the accumulator is the first subject
    with axiom-free certs) — fixed + record-scoped + fail-closed
@@ -237,9 +243,13 @@ Facts table. Fresh clone of `lean-transparency-log`; verify ALL of:
 - GitHub mirror head == local clone head;
 - the operator's operational state
   (`provider/state/transparency-log-main`) has `$EXPECTED_OLD_SIZE`
-  entries and roots to `$EXPECTED_OLD_ROOT` (this IS the append base —
-  NOT a reconstruction from the published `leaf` projections, which do
-  NOT rebuild the tree; the round-6 rehearsal proved that trap);
+  entries and roots to `$EXPECTED_OLD_ROOT` (this IS the append base.
+  The published face DOES rebuild the tree — hash each stored `leaf`
+  as-is; witness-audit does exactly that. The trap the round-6
+  rehearsal hit is different: published entries store the WRAPPED leaf,
+  and feeding them back through `log-append` wraps them AGAIN —
+  double-wrapped leaves, wrong root. Appends therefore run ONLY against
+  the operational state, which stores unwrapped attestations);
 - no partial entry 13 exists anywhere (no `entries/000012.json`, no
   size-13 head).
 **Check:** every bullet true. Any mismatch: STOP.
@@ -271,8 +281,10 @@ for B2. Do not run the ambient working tree.
 Using the pinned producer (`/tmp/pacta-13`) and its
 `examples/repos.yaml` entry `ltl-accumulator-verified`, run
 `pacta_provider check` against the clean-room subject `/tmp/attest-13`
-(A4's rehearsed invocation, real key/pub from A3's notes), writing an
-UNSIGNED-inspection candidate first.
+(A4's rehearsed invocation, real key/pub from A3's notes). NOTE: the
+candidate emerges PROVIDER-SIGNED (check signs at generation — that is
+fine and reversible); what must not happen before inspection is the
+APPEND. Nothing enters the log in this step.
 
 ### B2b. Candidate-leaf inspection gate (NEW — round-6 GPT §5, both reviewers)
 Before any append, mechanically require of the generated attestation:
@@ -296,7 +308,7 @@ REQUIRED ATTESTATION SCOPE (round-4 GPT §11; now carried by the LEAF's
 > result to the deployed consumer flow additionally relies on an
 > unmechanized authentic-size/root invariant (KNOWN-GAPS 14/15).
 
-**Check:** all assertions pass; record the unsigned-candidate sha256.
+**Check:** all assertions pass; record the candidate's pre-append sha256.
 Any failure: STOP (do not append a leaf you could not inspect).
 
 ### B3. Append 12→13 against the operational state
@@ -318,7 +330,7 @@ with exactly one line appended; the new head's root == the root the
 append computed; `pacta witness-audit` on the clone exits 0 (real key —
 full history verifies).
 
-### B3c. Consumer's-eye 12→13 (round-6: independent pin advance)
+### B3b. Consumer's-eye 12→13 (round-6: independent pin advance)
 From a DIFFERENT directory holding the OLD pin (size 12, root
 `$EXPECTED_OLD_ROOT`): `pacta sth-refresh` against the clone must
 verify the new head signature, verify consistency 12→13, and advance
@@ -355,7 +367,7 @@ standing `_<timestamp>_<hash8>` naming, archive a SANITIZED run record
 (NO private key material) containing at least:
 ```
 subject_commit, pacta_commit, config_sha256,
-unsigned_candidate_sha256, B1_check_transcript_sha256 + marker + exit,
+candidate_attestation_sha256 (pre-append), B1_check_transcript_sha256 + marker + exit,
 fidelity pins (230271/230016/73573/3867),
 old_size/old_root, new_index/new_size/new_root, new_leaf_hash,
 STH signature status, receipt verification, 12→13 consistency result,
