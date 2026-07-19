@@ -80,7 +80,7 @@ NEW_SIZE         = 13
 | log public key | `lean-transparency-log/provider.ed25519.pub` (PEM) | fingerprint `874c8a00…a56a` in `log-metadata.json` |
 | log PRIVATE key | **RESOLVED 2026-07-12**: laptop-side, mode 0600, inside a gitignored state dir of the pacta working tree (exact path in operator-private notes, deliberately not in this public file); public half byte-matches `provider.ed25519.pub`. NOT on the droplet. encrypted SD backup exists (A3b, operator, 2026-07-14) | A3 done; A3b done |
 | producer driver | **RESOLVED 2026-07-12**: it exists and is committed — pacta's `provider/` CLI (`python3 -m pacta_provider`: `check` → signed attestation; `log-append` → leaf + signed STH + receipt; `log-publish` → public face). Heads are signed with `signing_backend: verified-dalek-serial` (the dogfooded verified signer), `self_inclusion: verified`. Only the per-run orchestration was session work | see step A4 (rehearsal, not reconstruction) |
-| server deployment | private repo `PersonalCloudServer` (github, `master`) — since `a186bac` includes the ltl vhost/service/reconstruct.py, md5-verified == droplet | see its `DEPLOY.md` § "The LTL service" |
+| server deployment | the private infrastructure repo (github, `master`) — since `a186bac` includes the ltl vhost/service/reconstruct.py, md5-verified == droplet | see its `DEPLOY.md` § "The LTL service" |
 
 ---
 
@@ -375,7 +375,7 @@ the pin to 13. **Check:** exit 0, pin now 13.
 ### B4. Publish (the single irreversible step)
 The droplet serves the log from a DERIVED dir (`~/cloud/ltl/log`),
 rebuilt from a content mirror (`~/cloud/ltl/published`) — a bare
-`git pull` in `app/` is NOT enough (PersonalCloudServer DEPLOY.md
+`git pull` in `app/` is NOT enough (the private infra repo's DEPLOY.md
 § "The LTL service").
 ```
 cd <log clone> && git add -A && git commit -m "log update: leaf 12 - attestation of ltl-accumulator-verified@$SUBJECT_COMMIT (mechanized-model scope; KNOWN-GAPS 14/15)" && git push origin main
@@ -422,7 +422,7 @@ concrete object, not an unbound assertion).
 - Publish the accumulator blog post: source parked at
   `docs/optimistic-accountability.md` (this repo) — condense to the
   blog's voice, END WITH A LINK TO THE LIVE LEAF (that is why it
-  waited), operator reviews, then one .md into PersonalCloudServer
+  waited), operator reviews, then one .md into the private infra repo
   `blog/posts/`, `build-blog.py`, rsync per its DEPLOY.md. Closes the
   "one post per public repo" gap for this repo.
 - One-line note in this file: date, leaf hash, head root. Commit.
