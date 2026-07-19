@@ -1,7 +1,11 @@
 # ltl-accumulator-verified
 
-Lean 4 mechanization of the security analysis (§6) of the paper
-"The Lean Transparency Log" (https://ltl.zkdefi.org/paper): the Merkle
+Lean 4 mechanization of the security analysis (§6) of the system
+report "The Lean Transparency Log" (archived at
+https://ltl.zkdefi.org/paper/v0.2 — the version this corpus was built
+against; the current paper, "Accountable Distribution of Machine-Checked
+Correctness Evidence" at https://ltl.zkdefi.org/paper, presents these
+results in its §5 and carries this corpus as entry 13): the Merkle
 accumulator's own correctness and soundness theorems, kernel-checked, in
 the same discipline as the four `*-ed25519-verified` subject corpora.
 
@@ -26,7 +30,8 @@ its own **scope** block: what is kernel-checked is the mechanized model
 KNOWN-GAPS 14/15 — the leaf does not claim the deployed verifier is
 formally verified.
 
-All paper-§6/§10 mechanization targets are kernel-checked; the audit
+All paper-§6/§10 mechanization targets (v0.2 numbering) are
+kernel-checked; the audit
 surface is defined and green (`verification/check.sh`, exit 0). See
 [STATEMENT-MAP.md](STATEMENT-MAP.md) for the paper↔Lean review surface and
 [KNOWN-GAPS.md](KNOWN-GAPS.md) for the honest scope ledger.

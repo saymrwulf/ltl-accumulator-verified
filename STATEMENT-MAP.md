@@ -1,10 +1,18 @@
 # Statement map: paper §6 ↔ Lean corpus
 
+**Numbering note (2026-07-19):** every paper reference in this map uses
+the numbering of the archived system report — "The Lean Transparency
+Log", https://ltl.zkdefi.org/paper/v0.2 — whose §6 this corpus
+mechanized verbatim and whose §10 scopes the mechanization to items
+i–v. The current paper ("Accountable Distribution of Machine-Checked
+Correctness Evidence", https://ltl.zkdefi.org/paper) presents the same
+results in its §5.1–5.2 under different theorem numbers and cites this
+corpus in its §7.2 coverage table; do not match the numbers below
+against it.
+
 The kernel guarantees every proof below; what a reviewer must vet is the
 **statements** — that each Lean theorem says what the paper's item says.
-This map is the review surface. Paper = "The Lean Transparency Log"
-(https://ltl.zkdefi.org/paper), §6 and §10 (which scopes the
-mechanization to items i–v).
+This map is the review surface.
 
 | paper item | Lean name | file | cone |
 |---|---|---|---|

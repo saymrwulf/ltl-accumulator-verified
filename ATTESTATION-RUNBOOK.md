@@ -24,8 +24,8 @@ Agent Appendix at the end. Every step ends in a mechanical check.
 | **operator** | The human running the log service (owner of ltl.zkdefi.org and its keys). NOT warden (warden is a consumer). All Phase-B actions are operator actions. |
 | **corpus** | `ltl-accumulator-verified` at freeze commit `172a1d0` (round-5 freeze — the reviewed subject; supersedes the earlier `2da0a79`) — the kernel-checked mechanization of paper §6. |
 | **the button** | `verification/check.sh`. Green means: printed `=== ATTESTATION GREEN (Lean + fidelity) ===` AND `echo $?` printed `0`. BOTH. Never judge from scrolled output. |
-| **the log** | Live service ltl.zkdefi.org + public mirror repo `lean-transparency-log`. Currently 12 leaves (indices 0–11), head root `bcd15f9d…`, FROZEN. |
-| **entry 13** | The next leaf: the attestation of the corpus itself. Does not exist yet. |
+| **the log** | Live service ltl.zkdefi.org + public mirror repo `lean-transparency-log`. At execution time: 12 leaves (indices 0–11), head root `bcd15f9d…`, frozen. NOW (post-execution): 13 leaves, head root `3488a2d0…`, entry 13 live. |
+| **entry 13** | The attestation of the corpus itself. APPENDED 2026-07-16 as leaf index 12 (leaf hash `8cb258d6…`); this runbook is the record of that execution. |
 | **kit round N** | The review package delivered to the external reviewers after freeze N. Round-1 kit = freeze `6e56414`; round 2 = `260ad64`; round 3 = `9972ab4`; round 4 = `2da0a79`; round 5 = `172a1d0`; round 6 = review of `172a1d0` + pacta producer (current). |
 
 ## 2a. Release tuple (the single source of immutable identifiers)

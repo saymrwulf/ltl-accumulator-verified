@@ -1,5 +1,12 @@
 # Known gaps and scope boundaries (honest ledger)
 
+**Numbering note (2026-07-19):** "paper §N" references in this ledger
+use the archived system report's numbering ("The Lean Transparency
+Log", https://ltl.zkdefi.org/paper/v0.2), which this corpus was built
+against. The current paper at /paper has a different structure; in
+particular its §5.3/§5.4 are unrelated to the §5.3/§5.4 cited in gap
+14/15 below.
+
 Deliberate, documented, and none silent. Reviewers should verify this
 list is COMPLETE, not merely that the items are acceptable.
 
