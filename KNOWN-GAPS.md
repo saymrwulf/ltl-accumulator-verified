@@ -84,19 +84,25 @@ list is COMPLETE, not merely that the items are acceptable.
    from the kit). Round 3 ships the complete stdlib-only import closure
    of `pacta.transparency`, content-addressed against pacta commit
    `3d81d53`, plus the clean-extraction transcript with exit code.
-14. **Deployed `verify_consistency` accepts strictly more than the
-   mechanized `ConsRec` on lied-size inputs** (round-3 Claude addendum
-   F1*, reproduced by the operator against deployed pacta). Witness:
+14. **Deployed `verify_consistency` accepted lied-size proofs the
+   mechanized `ConsRec` rejects** — finite pinned family, no global
+   inclusion relation claimed. **[CLOSED 2026-07-23 — see closure note
+   at the end of this item.]** (round-3 Claude addendum F1*, reproduced
+   by the operator against deployed pacta). Witness:
    for the honest proof P between sizes 2→3, `verify_consistency(1, 3,
    R2, R3, P)` returns True — a semantically false claim ("R2 is the
    root of a size-1 prefix") — while `ConsRec` rejects; 3,405 such
    divergences exist for n < 60, ALL one-sided (the mechanized model
    never accepts anything the deployed verifier rejects; inclusion
    shows zero divergences under identical abuse). Mechanism: when the
-   claimed old size is a power of two, the deployed RFC 9162 iterative
-   algorithm seeds the walk with the old root and uses the sizes only
+   claimed old size is a power of two, the deployed iterative verifier
+   (an RFC 9162-style loop, but see root cause) seeds the walk with the
+   old root and uses the sizes only
    as bit-navigation state, so several size claims navigate one proof
-   identically. Consequences: (a) fidelity between the two consistency
+   identically. (Root cause, identified at closure: the deployed
+   verifier omitted RFC 9162 §2.1.4.2 Step 7's terminal `sn == 0`
+   condition; see the closure note below.) Consequences: (a) fidelity
+   between the two consistency
    verifiers is agreement over the pinned case families, NOT
    extensional equality — the harness's lied-size family pins the
    boundary (73,573 cases: lied old size exhaustive for n < 60, lied
@@ -115,8 +121,28 @@ list is COMPLETE, not merely that the items are acceptable.
    `src/pacta/sthstore.py` and `src/pacta/logclient.py` — code OUTSIDE
    the supplied fidelity target (review R4-3/GPT-4). No exploitability
    against that flow is claimed or ruled out here; assessing it
-   requires the signature/STH layer (gap 4). No pacta code change is
-   made (deployed behavior matches upstream RFC 9162 implementations).
+   requires the signature/STH layer (gap 4).
+
+   **CLOSURE (2026-07-23, pacta `ddbb5a4`).** The earlier sentence
+   "deployed behavior matches upstream RFC 9162 implementations" was
+   incorrect: the deployed `verify_consistency` implemented the RFC
+   9162 §2.1.4.2 bit-navigation loop but omitted its Step 7 terminal
+   condition that the new-size navigation counter reach zero
+   (`sn == 0`). That omission — not any property of RFC 9162 — is the
+   whole of the divergence: a faithful RFC verifier rejects the same
+   lied-size family. Restoring the one conjunct removes every divergence
+   in the pinned 73,573-case family, verified by a new three-way
+   regression `test_consistency_lied_size_three_way_agreement`
+   (deployed verifier / recursive `ConsRec` model / an independent
+   faithful RFC 9162 transliteration) over both the honest and lied-size
+   families. The divergence was originally surfaced by this corpus's own
+   two-way fidelity harness; the missing third (RFC) oracle is what
+   assigned blame to the deployed side rather than the model. The
+   historical divergence remains truthfully recorded in public log entry
+   13 and is reproducible at the tagged pre-fix commit
+   `vulnerable/sn0-consistency-fd2f6ba`; public entry 13, the attested
+   accumulator commit `172a1d0`, and the IACR submission PDF are all
+   unchanged. Gap 15 (deployment refinement invariant) remains open.
 15. **Deployment refinement invariant unmechanized** (round-4 GPT, its
    principal finding — split out from gap 14 because it carries the
    deployed-soundness claim). The corpus proves soundness of the
