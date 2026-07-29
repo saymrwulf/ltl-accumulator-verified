@@ -159,3 +159,24 @@ list is COMPLETE, not merely that the items are acceptable.
    ConsRec-equivalent acceptance; or (B) mechanize the signed-head +
    pin-store state machine and prove the refinement; or (C) keep the
    boundary and this scoped claim permanently.
+16. **The statement binding covers identity, not meaning** (added
+   2026-07-28 with `check.sh` Phase 3d). The coverage gate pins every
+   constant's name, kind and axiom cone, both directions; Phase 3d
+   additionally pins every constant's fully-elaborated TYPE and every
+   definition's fully-elaborated BODY, digest committed as
+   `AUDIT-MANIFEST.txt`. What that buys is that the corpus is the one
+   that was reviewed. What it does NOT buy: (a) whether those
+   statements say anything worth believing is a question a human
+   reading `STATEMENT-MAP.md` answers, not the button; (b) an author
+   who edits a definition and refreshes the digest in the same commit
+   passes every phase — the defence is that both changes are visible in
+   the diff at the pinned commit; (c) proof TERMS are deliberately not
+   bound, by proof irrelevance, so a proof rewritten to a different term
+   of the same statement and cone moves nothing.
+   Worth recording plainly, because it was measured rather than
+   reasoned: wrapping one branch of `pinAccept`'s body in `id (…)` is
+   definitionally equal, compiles, leaves name/kind/type/cone untouched,
+   and the coverage gate reports GREEN. Only the digest sees it. That is
+   the exact size of the gap Phase 3d closes, and
+   `selftest_statements.sh` case 1 replays it.
+

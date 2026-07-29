@@ -39,10 +39,23 @@ import lean_defs as L                       # noqa: E402
 
 NMAX = int(os.environ.get("FIDELITY_NMAX", "256"))
 # lied-size family pins (gap 14; valid for the default FIDELITY_LIED_NMAX=60):
-# 73,573 boundary cases, 3,867 expected one-sided divergences
-# (3,405 lied-old-size + 462 lied-new-size), smallest witness (n=3, m=2 claimed 1)
+# 73,573 boundary cases.
+#
+# The divergence count was 3,867 (3,405 lied-old-size + 462 lied-new-size,
+# smallest witness n=3, m=2 claimed 1) until pacta `ddbb5a4` (2026-07-23)
+# restored the RFC 9162 2.1.4.2 Step-7 terminal condition `sn == 0` to
+# verify_consistency. That one conjunct removes EVERY divergence in this
+# family, so the pin is now 0: the deployed verifier and the mechanized
+# ConsRec model agree on all 73,573 boundary cases.
+#
+# The pin was left at 3,867 when the fix landed, which made this assertion —
+# and therefore check.sh Phase 4 — fail from 2026-07-23 until it was noticed
+# on 2026-07-28. KNOWN-GAPS.md gap 14 had already recorded the closure; only
+# this constant was stale. Nothing about the paper, public log entry 13, or
+# the attested commit 172a1d0 changes: the historical divergence remains
+# truthfully recorded and reproducible at `vulnerable/sn0-consistency-fd2f6ba`.
 LIED_PIN_TOTAL = 73_573
-LIED_PIN_DIV = 3_867
+LIED_PIN_DIV = 0
 
 
 def _h(b):

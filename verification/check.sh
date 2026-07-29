@@ -6,7 +6,9 @@
 # both directions.
 #
 # Phases: 0 resource/integrity · 1 stub+axiom-smuggling audit ·
-#         2 compile manifest · 3 boundary-exact axiom audit
+#         2 compile manifest · 3 boundary-exact axiom audit ·
+#         3b environment-derived coverage · 3c doc-consistency ·
+#         3d statement + specification binding · 4 definition fidelity
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 # Toolchain bootstrap is overridable for reviewers with their own install
@@ -239,7 +241,8 @@ for cert in "${!CONES[@]}"; do
       "$HERE/inventory-allowlist.txt" || {
     echo "  PINNED BUT NOT INVENTORIED: $cert (in CONES, not in allowlist)"; COVFAIL=1; }
 done
-rm -f "$INVLOG"
+# (INVLOG is NOT removed here: Phase 3d binds the statement block emitted by
+#  this same run. Removed at the end of 3d.)
 
 # every pinned cert must actually be queried by AxiomCheck (no pin-but-never-check)
 for cert in "${!CONES[@]}"; do
@@ -276,6 +279,69 @@ print(' '.join(f'{int(v.replace(chr(95),\"\")):,}' for v in vals))"); do
 done
 [ "$DOCFAIL" = 0 ] && echo "  docs agree with allowlist ($NALLOW), CONES ($NCONES), fidelity pins"
 [ "$DOCFAIL" = 0 ] || { echo "DOC-CONSISTENCY FAILED"; exit 1; }
+# -- Phase 3d: statement + specification binding (P1-a) ---------------------
+# WHAT PHASES 3/3b DO NOT ESTABLISH. Phase 3 pins each certificate's exact
+# axiom cone; Phase 3b pins the full environment surface, kind and cone, both
+# directions. Neither records what a declaration SAYS. A theorem gutted to a
+# tautology keeps its name, its kind and its cone. A `def` redefined to BE the
+# thing it was meant to specify keeps all three, and every certificate stated
+# against it silently becomes vacuous — with the allowlist unmoved.
+#
+# Proofs/Inventory.lean therefore also emits, for every inventoried constant,
+# its fully-elaborated TYPE, and for every definition its fully-elaborated
+# BODY. Proof terms are deliberately absent: by proof irrelevance a theorem's
+# content is its statement. This phase binds the SHA-256 of that block, and
+# the block itself is committed as AUDIT-MANIFEST.txt so a mismatch is DIFFED
+# rather than merely reported.
+#
+# To rotate deliberately: run check.sh, take the printed OBSERVED digest, and
+# update the constant below AND AUDIT-MANIFEST.txt in the same reviewable
+# commit. Visibility in review is the defence; no harness audits its author.
+EXPECTED_STMT_SHA256="e7d422f0be9a9e6f5465058292e30c711d52856428da2b01c470a57ec181540c"
+echo "=== Phase 3d: statement + specification binding ==="
+STMTFAIL=0
+STMT_BLOCK=$(awk '/^STMT-BEGIN/{f=1;next} /^STMT-END/{f=0} f' "$INVLOG")
+# FAIL CLOSED ON ABSENCE: no block and a matching block must not share a path.
+if [ -z "$STMT_BLOCK" ]; then
+  echo "  NO STATEMENT BLOCK emitted by Proofs/Inventory.lean (fail-closed)"; STMTFAIL=1
+else
+  # Output integrity, same discipline as the INV-COUNT trailer: a truncated or
+  # crashed run must not pass as a short-but-matching block.
+  N_STMT=$(printf '%s\n' "$STMT_BLOCK" | grep -c '^STMT|')
+  STMT_TRAILER=$(grep '^STMT-COUNT|' "$INVLOG" | tail -1 | cut -d'|' -f2)
+  if [ -z "$STMT_TRAILER" ] || [ "$STMT_TRAILER" != "$N_STMT" ]; then
+    echo "  STATEMENT BLOCK TRUNCATED: trailer=${STMT_TRAILER:-absent}, observed $N_STMT"; STMTFAIL=1
+  fi
+  # Every inventoried constant must carry a statement line. Inventory.lean
+  # asserts this internally too; asserting it here as well means a tampered
+  # Inventory.lean cannot simply drop its own check.
+  N_INV=$(grep -c '^INV|' "$INVLOG")
+  N_TYPES=$(printf '%s\n' "$STMT_BLOCK" | grep -c '|type=')
+  if [ "$N_TYPES" != "$N_INV" ]; then
+    echo "  STATEMENT COVERAGE GAP: $N_INV constants inventoried, $N_TYPES carry a statement"; STMTFAIL=1
+  fi
+  GOT_STMT_SHA=$(printf '%s\n' "$STMT_BLOCK" | sha256sum | cut -d' ' -f1)
+  if [ "$GOT_STMT_SHA" != "$EXPECTED_STMT_SHA256" ]; then
+    printf '%s\n' "$STMT_BLOCK" > "$HERE/.stmt-manifest.observed"
+    echo "  STATEMENT DIGEST MISMATCH."
+    echo "    expected: $EXPECTED_STMT_SHA256"
+    echo "    observed: $GOT_STMT_SHA"
+    echo "    A statement or a definition body changed. First differences:"
+    diff -u "$HERE/AUDIT-MANIFEST.txt" "$HERE/.stmt-manifest.observed" 2>/dev/null \
+      | head -30 | sed 's/^/      /' || echo "      (AUDIT-MANIFEST.txt absent — cannot diff)"
+    rm -f "$HERE/.stmt-manifest.observed"
+    STMTFAIL=1
+  elif ! printf '%s\n' "$STMT_BLOCK" | cmp -s - "$HERE/AUDIT-MANIFEST.txt"; then
+    # The digest's INPUT must be committed and current, or the diff above would
+    # compare against a stale reference and quietly mislead the next reader.
+    echo "  COMMITTED BLOCK STALE: AUDIT-MANIFEST.txt does not match the emitted block"
+    echo "  (the digest matched, so the committed copy needs refreshing)"; STMTFAIL=1
+  fi
+fi
+[ "$STMTFAIL" = 0 ] && echo "  statements bound: $N_STMT lines over $N_INV constants, sha256 = $GOT_STMT_SHA"
+[ "$STMTFAIL" = 0 ] || { echo "STATEMENT BINDING FAILED"; rm -f "$INVLOG"; exit 1; }
+rm -f "$INVLOG"
+
 # -- Phase 4: definition fidelity (Lean defs vs deployed pacta verifiers) --
 echo "=== Phase 4: definition fidelity ==="
 PACTA_SRC="${PACTA_SRC:-$HERE/../../proof-aware-crypto-tooling-agent/src}"

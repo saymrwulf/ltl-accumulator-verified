@@ -95,7 +95,23 @@ def axiomCone (env : Environment) (root : Name) : Array Name := Id.run do
           stack := stack ++ v.getUsedConstants
   return (axioms.qsort (fun a b => a.toString < b.toString))
 
-#eval show CoreM Unit from do
+/-- Whitespace-canonical: every whitespace run collapses to one space, so the
+    pretty-printer's line wrapping cannot perturb the digest. -/
+def normWs (s : String) : String :=
+  (s.foldl (fun (acc : String × Bool) c =>
+      let c := if c.isWhitespace then ' ' else c
+      if c == ' ' then (if acc.2 then acc else (acc.1.push ' ', true))
+      else (acc.1.push c, false))
+    ("", true)).1
+
+/-- Fully-explicit (`pp.all`) rendering, whitespace-canonicalized. Implicit
+    arguments, instances and universe levels are all made visible, so two
+    statements that merely LOOK alike cannot share a rendering. -/
+def ppAll (e : Expr) : MetaM String := do
+  let fmt ← withOptions (fun o => o.setBool `pp.all true) (Meta.ppExpr e)
+  return normWs fmt.pretty
+
+#eval show MetaM Unit from do
   let env ← getEnv
   -- Resolve every corpus module to its index; a miss is a hard error.
   let mut idxs : Array Nat := #[]
@@ -104,6 +120,17 @@ def axiomCone (env : Environment) (root : Name) : Array Name := Id.run do
     | some i => idxs := idxs.push i
     | none   => throwError "INVENTORY ERROR: corpus module {m} is not imported"
   let mut lines : Array String := #[]
+  -- STATEMENT SURFACE (P1-a). The INV lines above record what each constant
+  -- IS and what it RESTS ON. They do not record what it SAYS: a theorem gutted
+  -- to a tautology keeps its name, its kind and its axiom cone, and a `def`
+  -- redefined to BE the thing it was meant to specify keeps all three too,
+  -- while the certificate stated against it silently becomes vacuous. So every
+  -- constant additionally contributes its fully-elaborated TYPE, and every
+  -- definition its fully-elaborated BODY. Proof terms are NOT emitted: by
+  -- proof irrelevance a theorem's content is its statement, and its term is
+  -- both enormous and irrelevant to what is being claimed.
+  let mut stmts : Array String := #[]
+  let mut nTypes := 0
   for (n, ci) in env.constants.toList do
     if let some i := env.getModuleIdxFor? n then
       if idxs.contains i then
@@ -115,9 +142,25 @@ def axiomCone (env : Environment) (root : Name) : Array Name := Id.run do
           throwError "INVENTORY ERROR: cone divergence on {n}: walker={cone} core={coreCone}"
         let coneStr := ",".intercalate (cone.toList.map (·.toString))
         lines := lines.push s!"INV|{n}|{kindOf ci}|{coneStr}"
+        stmts := stmts.push s!"STMT|{n}|{kindOf ci}|type={← ppAll ci.type}"
+        nTypes := nTypes + 1
+        match ci with
+        | .defnInfo v => stmts := stmts.push s!"STMT|{n}|{kindOf ci}|value={← ppAll v.value}"
+        | _           => pure ()
   let sorted := lines.qsort (· < ·)
   for l in sorted do
     IO.println l
   IO.println s!"INV-COUNT|{sorted.size}"
+  -- FAIL CLOSED: the statement surface must cover the inventory exactly. If
+  -- these ever diverge, some constant is inventoried but unbound — which is
+  -- precisely the gap this section exists to close.
+  let sortedStmts := stmts.qsort (· < ·)
+  unless nTypes == sorted.size do
+    throwError "INVENTORY ERROR: {sorted.size} constants inventoried but {nTypes} carry a statement"
+  IO.println "STMT-BEGIN"
+  for l in sortedStmts do
+    IO.println l
+  IO.println "STMT-END"
+  IO.println s!"STMT-COUNT|{sortedStmts.size}"
 
 end LTLAccAudit
