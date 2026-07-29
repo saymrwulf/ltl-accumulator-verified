@@ -123,15 +123,31 @@ grep -q "DEAD FILE: Proofs/Rogue.lean" "$T/check8.out" || {
 echo "  ✓ case 8 unmanifested Proofs module: check.sh dies with DEAD FILE"
 rm -f "$T/Proofs/Rogue.lean"
 
-# 9 — unmanifested gen/ module (full check.sh; dies in Phase 2)
+# 9 — unmanifested gen/ module. TWO gates stand here now and the case
+#     exercises BOTH, because asserting only the outer one would quietly
+#     retire the inner one from the test suite.
+#
+#     9a: Phase 0c (added 2026-07-29) derives the required pin set from
+#     gen/**.lean, so an unpinned model file is caught before compilation.
+#     9b: with the rogue file pinned — i.e. an author who added it
+#     deliberately — the dead-file gate in Phase 2 must still catch that it is
+#     absent from the compile manifest.
 printf '/- rogue -/\ntheorem rogue_gen : 1 = 1 := rfl\n' > "$T/gen/LTLAcc/Rogue.lean"
-if SKIP_FIDELITY=1 "$T/check.sh" > "$T/check9.out" 2>&1; then
-  echo "  ✗ case 9: check.sh PASSED with unmanifested gen/LTLAcc/Rogue.lean"; exit 1
+if SKIP_FIDELITY=1 "$T/check.sh" > "$T/check9a.out" 2>&1; then
+  echo "  ✗ case 9a: check.sh PASSED with an unpinned gen/LTLAcc/Rogue.lean"; exit 1
 fi
-grep -q "DEAD FILE (gen): gen/LTLAcc/Rogue.lean" "$T/check9.out" || {
-  echo "  ✗ case 9: check.sh failed without DEAD FILE (gen) diagnosis"; tail -5 "$T/check9.out"; exit 1; }
-echo "  ✓ case 9 unmanifested gen module: check.sh dies with DEAD FILE (gen)"
+grep -q "does not match HARNESS.sha256" "$T/check9a.out" || {
+  echo "  ✗ case 9a: check.sh failed without the harness-set diagnosis"; tail -5 "$T/check9a.out"; exit 1; }
+echo "  ✓ case 9a unpinned gen module: Phase 0c dies with a harness-set mismatch"
+
+( cd "$T" && sha256sum gen/LTLAcc/Rogue.lean >> HARNESS.sha256 )
+if SKIP_FIDELITY=1 "$T/check.sh" > "$T/check9b.out" 2>&1; then
+  echo "  ✗ case 9b: check.sh PASSED with unmanifested gen/LTLAcc/Rogue.lean"; exit 1
+fi
+grep -q "DEAD FILE (gen): gen/LTLAcc/Rogue.lean" "$T/check9b.out" || {
+  echo "  ✗ case 9b: check.sh failed without DEAD FILE (gen) diagnosis"; tail -5 "$T/check9b.out"; exit 1; }
+echo "  ✓ case 9b pinned but unmanifested: check.sh dies with DEAD FILE (gen)"
 
 rm -rf "$WORK"
 trap - ERR
-echo "=== SELF-TEST GREEN: 9 attack cases defeated + positive control ==="
+echo "=== SELF-TEST GREEN: 10 attack cases defeated + positive control ==="

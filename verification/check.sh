@@ -116,6 +116,59 @@ while IFS= read -r -d '' o; do
   [ -f "${o%.olean}.lean" ] || { echo "ORPHAN OLEAN: $o has no sibling .lean (stale artifact)"; exit 1; }
 done < <(find "$HERE" -name '*.olean' -print0)
 
+# ── Phase 0c: harness integrity ─────────────────────────────────────────────
+# WHY. Every gate below is executed by a script that, until now, nothing
+# pinned. Round-5 review of the companion SLH-DSA repository stubbed the
+# compiler wrapper alone and its button printed ALL GREEN in 3.6 seconds over
+# deliberately destroyed proofs. Depth of checking is worth nothing if the
+# thing doing the checking is unbound — and this repo's gates are the estate's
+# strongest, which makes them the most valuable to switch off.
+#
+# WHICH files must be pinned is POLICY, and policy lives here — in the root of
+# trust — never inside the map being consulted. If the required set were read
+# from HARNESS.sha256, deleting an entry would silently un-pin that file
+# instead of failing the build.
+#
+# Membership is SELF-DERIVING from two sources the filesystem can answer: the
+# executable bit (anything this script can shell out to) and gen/**.lean (the
+# extracted model, which nothing else byte-pins in this repo). Load-bearing
+# files that are neither — the audit drivers, the policy tables, the toolchain
+# pin, the fidelity harness — cannot be discovered and are listed explicitly.
+HARNESS_EXTRA=(
+  AUDIT-MANIFEST.txt        # the statement block Phase 3d's digest is taken over
+  inventory-allowlist.txt   # the pinned audit surface Phase 3b diffs against
+  lean-toolchain            # which Lean the corpus claims to have been checked by
+  fidelity/lean_defs.py     # the Python transcription the differential compares
+  fidelity/run_fidelity.py  # the differential itself
+  Proofs/Inventory.lean     # audit driver: emits the inventory AND the statements
+  Proofs/AxiomCheck.lean    # audit driver: the #print axioms queries of Phase 3
+)
+echo "=== Phase 0c: harness integrity ==="
+if [ ! -s "$HERE/HARNESS.sha256" ]; then
+  echo "FATAL: HARNESS.sha256 is missing or empty — the harness is unpinned."
+  exit 1
+fi
+# check.sh is pinned like everything else: that catches drift and accident. It
+# does NOT stop an author who edits this script and refreshes its pin in one
+# commit — nothing executed by the harness can. The defence there is that both
+# changes appear in the diff at the pinned commit.
+HARNESS_REQUIRED=$( { find "$HERE" -type f -executable -not -path '*/.git/*' -printf '%P\n'
+                      find "$HERE/gen" -type f -name '*.lean' -printf 'gen/%P\n'
+                      printf '%s\n' "${HARNESS_EXTRA[@]}"; } | sort -u )
+HARNESS_PINNED=$(awk '{print $2}' "$HERE/HARNESS.sha256" | sort -u)
+if [ "$HARNESS_REQUIRED" != "$HARNESS_PINNED" ]; then
+  echo "FATAL: the set of harness files does not match HARNESS.sha256."
+  echo "  (< pinned, > present and requiring a pin)"
+  diff <(echo "$HARNESS_PINNED") <(echo "$HARNESS_REQUIRED") | sed 's/^/    /'
+  exit 1
+fi
+if ! ( cd "$HERE" && sha256sum -c --quiet HARNESS.sha256 ) ; then
+  echo "FATAL: a harness file does not match its pin. The button you are"
+  echo "running is not the button that was reviewed."
+  exit 1
+fi
+echo "  $(wc -l < "$HERE/HARNESS.sha256") harness files match their pins"
+
 echo "=== Phase 1: stub + axiom-smuggling audit ==="
 if grep -rn 'by trivial' "$HERE"/Proofs/*.lean 2>/dev/null; then
   echo "STUB DETECTED"; exit 1; fi
