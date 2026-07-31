@@ -24,6 +24,13 @@ CORES="${LEAN_MAX_CORES:-0-3}"
 
 GEN_MODULES=( LTLAcc/HashExternal )
 PROOFS=( Basic Completeness Extract Descent Consistency Binding3 Refactor Theorem3 PinStore )
+# The audit infrastructure, named ONCE. These are not corpus — they are the
+# instruments — but they are Lean modules in the audited tree, so the dead-file
+# scan must know them by membership rather than by two hard-coded basename
+# comparisons, and Phase 3b must inventory what they declare. CLASS 9: until
+# 2026-07-31 nothing looked at the drivers' own declaration surface, so an
+# `axiom` or a `theorem` added to either was invisible to every phase.
+DRIVERS=( AxiomCheck Inventory )
 
 # Certificates and their exact expected cones (observed via #print axioms,
 # never guessed; any drift in EITHER direction is a failure).
@@ -202,8 +209,7 @@ lake env bash -c "
   done
   for f in Proofs/*.lean; do
     b=\$(basename \"\$f\" .lean)
-    [ \"\$b\" = AxiomCheck ] && continue   # audit infrastructure, compiled in Phase 3
-    [ \"\$b\" = Inventory ]  && continue   # audit infrastructure, compiled in Phase 3b
+    case \" ${DRIVERS[*]} \" in (*\" \$b \"*) continue;; esac  # audit infrastructure, compiled in Phase 3/3b
     case \" ${PROOFS[*]} \" in (*\" \$b \"*) ;; (*) echo \"DEAD FILE: \$f\"; exit 1;; esac
   done
   # gen/ gets the same unmanifested-source check (review round 2, GPT M1)
@@ -211,6 +217,21 @@ lake env bash -c "
     b=\"LTLAcc/\$(basename \"\$f\" .lean)\"
     case \" ${GEN_MODULES[*]} \" in (*\" \$b \"*) ;; (*) echo \"DEAD FILE (gen): \$f\"; exit 1;; esac
   done
+  # CLASS 15. The two loops above look only INSIDE Proofs/ and gen/LTLAcc/, so
+  # until 2026-07-31 a Lean file anywhere else was invisible: one at the
+  # verification root, or under gen/AnythingElse/, was neither compiled nor
+  # rejected. It could be imported by name from a manifested module — the
+  # manifest names modules, and LEAN_PATH includes both roots — which is a
+  # source of the corpus that no phase reads and no pin covers. Nothing may
+  # live in either root but the two enumerated sets.
+  shopt -s nullglob
+  for f in *.lean; do echo \"DEAD FILE (verification root): \$f\"; exit 1; done
+  for d in gen/*/; do
+    [ \"\$d\" = 'gen/LTLAcc/' ] && continue
+    for f in \"\$d\"*.lean; do echo \"DEAD FILE (gen subdirectory): \$f\"; exit 1; done
+  done
+  for f in gen/*.lean; do echo \"DEAD FILE (gen root): \$f\"; exit 1; done
+  shopt -u nullglob
 "
 if grep -q "uses 'sorry'" "$LOG"; then echo "STUB: sorry detected"; exit 1; fi
 rm -f "$LOG"
@@ -263,15 +284,55 @@ lake env bash -c "
 
 # The inventory's corpus-module list must BE the compile manifest — both
 # directions, so neither can drift from the other silently.
+# Read the module LISTS, not the file. This comparison used to grep the whole
+# of Inventory.lean for a backticked name, which meant any PROSE mention of a
+# module counted: a doc comment naming `Proofs.AxiomCheck` broke the count, and
+# — worse in the other direction — a doc mention of a module missing from the
+# array would have satisfied the presence check and hidden the omission. The
+# manifest is the arrays; read the arrays.
+MODLISTS=$(sed -n '/^def corpusModules/,/\]/p;/^def driverModules/,/\]/p' "$HERE/Proofs/Inventory.lean")
 for m in "${GEN_MODULES[@]}" "${PROOFS[@]}"; do
   mod=$(echo "$m" | sed 's|^LTLAcc/|LTLAcc.|; s|^\([A-Z]\)|Proofs.\1|; s|^Proofs\.LTLAcc\.|LTLAcc.|')
-  grep -qF "\`$mod" "$HERE/Proofs/Inventory.lean" || {
+  grep -qF "\`$mod" <<<"$MODLISTS" || {
     echo "  MANIFEST DRIFT: $mod compiled by check.sh but not inventoried"; COVFAIL=1; }
 done
-NMANIFEST=$(( ${#GEN_MODULES[@]} + ${#PROOFS[@]} ))
-NINV=$(grep -oE '`(LTLAcc|Proofs)\.[A-Za-z0-9_.]+' "$HERE/Proofs/Inventory.lean" | wc -l)
+# The drivers are named in Inventory.lean too, now that it walks their
+# declaration surface — so they count on both sides of this equality.
+for d in "${DRIVERS[@]}"; do
+  [ "$d" = Inventory ] && continue   # covered as the current module, which has
+                                     # no module index while it elaborates and
+                                     # so is not named in its own module list
+  grep -qF "\`Proofs.$d" <<<"$MODLISTS" || {
+    echo "  MANIFEST DRIFT: driver Proofs.$d is not inventoried"; COVFAIL=1; }
+done
+NMANIFEST=$(( ${#GEN_MODULES[@]} + ${#PROOFS[@]} + ${#DRIVERS[@]} - 1 ))
+NINV=$(grep -oE '`(LTLAcc|Proofs)\.[A-Za-z0-9_.]+' <<<"$MODLISTS" | wc -l)
 [ "$NMANIFEST" = "$NINV" ] || {
   echo "  MANIFEST DRIFT: check.sh compiles $NMANIFEST modules, Inventory lists $NINV"; COVFAIL=1; }
+
+# CLASS 9. The driver-surface block must actually have RUN. Its violations are
+# raised inside Lean, so a walk that silently did not execute would look exactly
+# like a clean one — the same vacuous-pass shape the INV-COUNT trailer exists to
+# close. Require the trailer, and require it to agree with the lines.
+NDRV=$(grep -c '^DRV|' "$INVLOG" || true)
+DRVTRAILER=$(grep '^DRV-COUNT|' "$INVLOG" | tail -1 | cut -d'|' -f2)
+if [ -z "$DRVTRAILER" ] || [ "$DRVTRAILER" != "$NDRV" ]; then
+  echo "  DRIVER SURFACE NOT OBSERVED: trailer=${DRVTRAILER:-absent}, observed $NDRV lines"
+  COVFAIL=1
+elif [ "$NDRV" -eq 0 ]; then
+  echo "  DRIVER SURFACE NOT OBSERVED: the instruments declare nothing at all,"
+  echo "  which cannot be true — Inventory.lean declares its own machinery."
+  COVFAIL=1
+else
+  echo "  driver surface: $NDRV declarations across the audit instruments, no axiom, no claim"
+fi
+# NOTE ON WHAT THIS DOES NOT DO. It does not pin WHICH definitions the
+# instruments declare — a new inert `def` in a driver is allowed. That is
+# deliberate: both drivers are byte-pinned in HARNESS.sha256 (Phase 0c), so
+# their contents cannot drift unnoticed, and a second policy file listing their
+# internals would add a thing to maintain without adding a thing to catch. What
+# the check above adds is the property byte-pinning cannot give: that no
+# instrument declares an AXIOM or a CLAIM, whatever its bytes are.
 
 # CONES ⊆ allowlist with IDENTICAL cones: the #print-axioms-pinned table
 # and the environment inventory are two independent computations of the

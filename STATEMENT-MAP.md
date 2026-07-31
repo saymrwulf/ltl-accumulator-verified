@@ -66,8 +66,29 @@ cross-checked against the inventory's independently computed cones.
 asserted against the allowlist/CONES/harness by check.sh Phase 3c on
 every run — stale-count drift is now a red button, not an erratum:
 review R4-1, after three consecutive rounds of hand-edit failures.)
-`verification/selftest_audit.sh` attacks the gate with nine injection
-cases (attributed/indented/private/instance declarations, a nested
-namespace reusing an audited basename, a smuggled axiom, a deleted
-declaration, and unmanifested Proofs/ and gen/ modules) — each must
-fail the exact production gate.
+`verification/selftest_audit.sh` attacks the gate with fourteen
+injection cases (attributed/indented/private/instance declarations, a
+nested namespace reusing an audited basename, a smuggled axiom, a
+deleted declaration, and unmanifested Proofs/ and gen/ modules) — each
+must fail the exact production gate. Four were added on 2026-07-31 and
+close two classes the earlier suite did not reach:
+
+* **A Lean file where no phase was looking.** The dead-file scan read
+  `Proofs/*.lean` and `gen/LTLAcc/*.lean` and nothing else, so a module
+  at the verification root or under any other `gen/` subdirectory was
+  neither compiled nor rejected — while remaining importable by name,
+  since `LEAN_PATH` contains both roots. Cases 10 and 11 forbid both.
+* **The instruments' own declaration surface.** `Proofs/AxiomCheck.lean`
+  and `Proofs/Inventory.lean` perform the audit and are therefore not
+  corpus, so nothing inventoried what THEY declare. `Inventory.lean` now
+  walks both — including itself, as the module still being elaborated —
+  and fails closed on an axiom, or on a theorem that is not an artefact
+  of a definition declared alongside it. Cases 12 and 13 attack each
+  driver; case 12 uses an INDENTED axiom, because Phase 1's source grep
+  catches an unindented one and the point is to reach the kernel-side
+  walk behind it.
+
+Both new gates were negative-tested by removal. With the driver-surface
+check disabled, `check.sh` PASSES a tree whose inventory driver declares
+`axiom driver_cheat : False` — which is the whole reason the check
+exists.

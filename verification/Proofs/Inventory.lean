@@ -40,6 +40,7 @@ import Proofs.Binding3
 import Proofs.Refactor
 import Proofs.Theorem3
 import Proofs.PinStore
+import Proofs.AxiomCheck
 
 open Lean
 
@@ -51,6 +52,17 @@ def corpusModules : Array Name :=
     `Proofs.Basic, `Proofs.Completeness, `Proofs.Extract, `Proofs.Descent,
     `Proofs.Consistency, `Proofs.Binding3, `Proofs.Refactor,
     `Proofs.Theorem3, `Proofs.PinStore]
+
+/-- The audit INSTRUMENTS, as opposed to the corpus. They are Lean modules in
+    the audited tree, so what they declare is part of this repository's
+    surface — but they are not proofs, and nothing may rest on them.
+
+    `Proofs.AxiomCheck` is reachable here because this module imports it; this
+    module ITSELF has no module index while it is being elaborated, so its own
+    declarations are the ones the environment reports with no originating
+    module, and they are checked that way below. That is what makes this
+    inventory cover the instrument that produces it. -/
+def driverModules : Array Name := #[`Proofs.AxiomCheck]
 
 def kindOf : ConstantInfo → String
   | .axiomInfo  _ => "axiom"
@@ -151,6 +163,63 @@ def ppAll (e : Expr) : MetaM String := do
   for l in sorted do
     IO.println l
   IO.println s!"INV-COUNT|{sorted.size}"
+  -- ── CLASS 9: the instruments' own declaration surface ────────────────────
+  -- The loop above walks the CORPUS. It says nothing about the two modules
+  -- that perform the audit, and until 2026-07-31 nothing else did either: an
+  -- `axiom` or a `theorem` added to Proofs.AxiomCheck or to this file was
+  -- invisible to every phase of the button. Both are covered here.
+  --
+  -- Proofs.AxiomCheck is reachable by module index because this module imports
+  -- it. THIS module has no index yet — it is still being elaborated — so its
+  -- own declarations are exactly those the environment reports with no
+  -- originating module, which is how the inventory covers the instrument that
+  -- produces it rather than exempting itself.
+  --
+  -- The policy is not "declare nothing": this file legitimately declares the
+  -- machinery above. The policy is that an instrument may declare only inert
+  -- definitions. An `axiom` here would widen the trusted base without
+  -- appearing in any certificate's cone; a `theorem` here would be a claim
+  -- that no certificate covers and no allowlist pins.
+  let mut drvIdxs : Array Nat := #[]
+  for m in driverModules do
+    match env.getModuleIdx? m with
+    | some i => drvIdxs := drvIdxs.push i
+    | none   => throwError "INVENTORY ERROR: driver module {m} is not imported"
+  let mut drvNames : Std.HashSet Name := {}
+  let mut drvConsts : Array (Name × ConstantInfo) := #[]
+  for (n, ci) in env.constants.toList do
+    let here : Bool :=
+      match env.getModuleIdxFor? n with
+      | some i => drvIdxs.contains i
+      | none   => true          -- declared by this file, still being elaborated
+    if here then
+      drvNames := drvNames.insert n
+      drvConsts := drvConsts.push (n, ci)
+  let mut drv : Array String := #[]
+  for (n, ci) in drvConsts do
+    let k := kindOf ci
+    -- An AXIOM in an instrument is never acceptable: it would widen the trusted
+    -- base without appearing in any certificate's cone.
+    if k == "axiom" then
+      throwError "DRIVER SURFACE VIOLATION: {n} is an axiom declared by the audit \
+                  infrastructure. An instrument may not widen the trusted base."
+    -- A THEOREM needs care rather than a flat ban. Defining a function by
+    -- well-founded recursion makes the elaborator emit its own proof
+    -- obligations — `LTLAccAudit.axiomCone._proof_1` is one, and a flat ban
+    -- rejected this very file. The distinction that matters is whether the
+    -- theorem is a CLAIM someone wrote or an ARTEFACT of a definition here:
+    -- an artefact's name extends the name of a constant declared alongside it,
+    -- a standalone claim's does not.
+    if k == "theorem" && !drvNames.contains n.getPrefix then
+      throwError "DRIVER SURFACE VIOLATION: {n} is a standalone theorem declared by \
+                  the audit infrastructure. An instrument may declare definitions \
+                  and whatever the elaborator generates for them — never a claim \
+                  of its own, which no certificate covers and no allowlist pins."
+    drv := drv.push s!"DRV|{n}|{k}"
+  let drvSorted := drv.qsort (· < ·)
+  for l in drvSorted do
+    IO.println l
+  IO.println s!"DRV-COUNT|{drvSorted.size}"
   -- FAIL CLOSED: the statement surface must cover the inventory exactly. If
   -- these ever diverge, some constant is inventoried but unbound — which is
   -- precisely the gap this section exists to close.

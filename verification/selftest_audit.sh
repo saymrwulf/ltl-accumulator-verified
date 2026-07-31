@@ -39,6 +39,16 @@ trap 'echo "(scratch tree kept for inspection: $WORK)"' ERR
 echo "=== audit-gate self-test (scratch: $WORK) ==="
 cp -a "$SRC" "$WORK/verification"
 T="$WORK/verification"
+# The button also reads two documents from the REPOSITORY root, one level above
+# verification/. Copying only verification/ left them missing, so check.sh in
+# the scratch tree always died in Phase 3c with DOC DRIFT — which meant every
+# `if check.sh; then <this attack was not caught>` guard below was unfirable:
+# check.sh could not pass in here even with no attack at all, so those guards
+# asserted nothing. Only the diagnostic greps were doing any work. Copy the
+# documents so a genuinely-undetected attack would now show up as a PASS.
+for d in README.md STATEMENT-MAP.md; do
+  [ -f "$SRC/../$d" ] && cp "$SRC/../$d" "$WORK/$d"
+done
 cp "$T/Proofs/PinStore.lean" "$T/PinStore.pristine"
 
 # Recompile the injected leaf module + the inventory, then run the gate.
@@ -148,6 +158,96 @@ grep -q "DEAD FILE (gen): gen/LTLAcc/Rogue.lean" "$T/check9b.out" || {
   echo "  ✗ case 9b: check.sh failed without DEAD FILE (gen) diagnosis"; tail -5 "$T/check9b.out"; exit 1; }
 echo "  ✓ case 9b pinned but unmanifested: check.sh dies with DEAD FILE (gen)"
 
+# Case 9 was the last case when it was written, so it left its rogue file and
+# its pin in place — harmless then, but the cases below inherit the tree. Undo
+# it here rather than in case 9, so that case keeps testing exactly what it
+# tested before.
+rm -f "$T/gen/LTLAcc/Rogue.lean"
+( cd "$T" && grep -v ' gen/LTLAcc/Rogue.lean$' HARNESS.sha256 > .h && mv .h HARNESS.sha256 )
+
+# ── CLASS 15: a Lean file where no phase was looking ────────────────────────
+# Until 2026-07-31 the dead-file scan read Proofs/*.lean and gen/LTLAcc/*.lean
+# and nothing else. A module at the verification root, or under any other gen/
+# subdirectory, was neither compiled nor rejected — while being importable by
+# name, since LEAN_PATH contains both roots. A source of the corpus that no
+# phase reads and no pin covers is precisely what the dead-file gate exists to
+# forbid; it was simply looking in two places instead of everywhere.
+
+# 10 — a stray module at the verification root. NOTE: Phase 0c does not stand
+#      in front of this one. Its required-pin set is executables plus
+#      gen/**.lean, so a root .lean is invisible to it; the Phase 2 check added
+#      for this class is the only gate here.
+printf '/- rogue -/\ntheorem rogue_root : 1 = 1 := rfl\n' > "$T/Rogue.lean"
+if SKIP_FIDELITY=1 "$T/check.sh" > "$T/check10.out" 2>&1; then
+  echo "  ✗ case 10: check.sh PASSED with a stray Rogue.lean at the verification root"; exit 1
+fi
+grep -q "DEAD FILE (verification root): Rogue.lean" "$T/check10.out" || {
+  echo "  ✗ case 10: check.sh failed without the root diagnosis"; tail -5 "$T/check10.out"; exit 1; }
+echo "  ✓ case 10 stray module at the verification root: DEAD FILE (verification root)"
+rm -f "$T/Rogue.lean"
+
+# 11 — a module in a gen/ subdirectory that is not LTLAcc/. Two gates again,
+#      and both are exercised for the same reason as case 9.
+mkdir -p "$T/gen/Rogue"
+printf '/- rogue -/\ntheorem rogue_sub : 1 = 1 := rfl\n' > "$T/gen/Rogue/Extra.lean"
+if SKIP_FIDELITY=1 "$T/check.sh" > "$T/check11a.out" 2>&1; then
+  echo "  ✗ case 11a: check.sh PASSED with an unpinned gen/Rogue/Extra.lean"; exit 1
+fi
+grep -q "does not match HARNESS.sha256" "$T/check11a.out" || {
+  echo "  ✗ case 11a: check.sh failed without the harness-set diagnosis"; tail -5 "$T/check11a.out"; exit 1; }
+echo "  ✓ case 11a unpinned module in a foreign gen subdirectory: harness-set mismatch"
+
+( cd "$T" && sha256sum gen/Rogue/Extra.lean >> HARNESS.sha256 )
+if SKIP_FIDELITY=1 "$T/check.sh" > "$T/check11b.out" 2>&1; then
+  echo "  ✗ case 11b: check.sh PASSED with a pinned gen/Rogue/Extra.lean"; exit 1
+fi
+grep -q "DEAD FILE (gen subdirectory): gen/Rogue/Extra.lean" "$T/check11b.out" || {
+  echo "  ✗ case 11b: check.sh failed without the subdirectory diagnosis"; tail -5 "$T/check11b.out"; exit 1; }
+echo "  ✓ case 11b pinned but in a foreign gen subdirectory: DEAD FILE (gen subdirectory)"
+rm -rf "$T/gen/Rogue"
+( cd "$T" && grep -v ' gen/Rogue/Extra.lean$' HARNESS.sha256 > .h && mv .h HARNESS.sha256 )
+
+# ── CLASS 9: the instruments' own declaration surface ───────────────────────
+# The audit drivers are not corpus, so nothing inventoried what THEY declare.
+# Both are byte-pinned, so each attack must re-pin to reach the new gate —
+# which is the point: byte-pinning stops drift, it does not stop an author.
+# What follows is what byte-pinning cannot give.
+
+# 12 — an axiom in the inventory driver itself, INDENTED. Phase 1 greps
+#      Proofs/*.lean for `^axiom `, so an unindented one is caught there and
+#      never reaches the new gate. Indentation is the documented evasion of
+#      that regex — measured on Lean v4.30.0-rc2 — so this case is the one
+#      that actually exercises the kernel-side driver walk rather than the
+#      source scan standing in front of it.
+sed -i 's|^#eval show MetaM Unit|  axiom driver_cheat : False\n\n#eval show MetaM Unit|' \
+  "$T/Proofs/Inventory.lean"
+grep -q '^  axiom driver_cheat' "$T/Proofs/Inventory.lean" || {
+  echo "  ✗ case 12: could not inject the indented axiom (case would be vacuous)"; exit 1; }
+( cd "$T" && grep -v ' Proofs/Inventory.lean$' HARNESS.sha256 > .h \
+  && sha256sum Proofs/Inventory.lean >> .h && mv .h HARNESS.sha256 )
+if SKIP_FIDELITY=1 "$T/check.sh" > "$T/check12.out" 2>&1; then
+  echo "  ✗ case 12: check.sh PASSED with an axiom declared in Proofs/Inventory.lean"; exit 1
+fi
+grep -q "DRIVER SURFACE VIOLATION" "$T/check12.out" || {
+  echo "  ✗ case 12: check.sh failed without the driver-surface diagnosis"; tail -5 "$T/check12.out"; exit 1; }
+echo "  ✓ case 12 indented axiom in the inventory driver: DRIVER SURFACE VIOLATION"
+cp "$SRC/Proofs/Inventory.lean" "$T/Proofs/Inventory.lean"
+( cd "$T" && grep -v ' Proofs/Inventory.lean$' HARNESS.sha256 > .h \
+  && sha256sum Proofs/Inventory.lean >> .h && mv .h HARNESS.sha256 )
+
+# 13 — a standalone claim in the OTHER driver. A theorem there is not a
+#      compiler artefact of any definition, which is exactly the distinction
+#      the gate draws: it must admit `axiomCone._proof_1` and reject this.
+printf '\ntheorem driver_claim : 1 = 1 := rfl\n' >> "$T/Proofs/AxiomCheck.lean"
+( cd "$T" && grep -v ' Proofs/AxiomCheck.lean$' HARNESS.sha256 > .h   && sha256sum Proofs/AxiomCheck.lean >> .h && mv .h HARNESS.sha256 )
+if SKIP_FIDELITY=1 "$T/check.sh" > "$T/check13.out" 2>&1; then
+  echo "  ✗ case 13: check.sh PASSED with a standalone theorem in Proofs/AxiomCheck.lean"; exit 1
+fi
+grep -q "DRIVER SURFACE VIOLATION" "$T/check13.out" || {
+  echo "  ✗ case 13: check.sh failed without the driver-surface diagnosis"; tail -5 "$T/check13.out"; exit 1; }
+echo "  ✓ case 13 standalone claim in the axiom-check driver: DRIVER SURFACE VIOLATION"
+cp "$SRC/Proofs/AxiomCheck.lean" "$T/Proofs/AxiomCheck.lean"
+
 rm -rf "$WORK"
 trap - ERR
-echo "=== SELF-TEST GREEN: 10 attack cases defeated + positive control ==="
+echo "=== SELF-TEST GREEN: 14 attack cases defeated + positive control ==="
