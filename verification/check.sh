@@ -117,6 +117,24 @@ for f in "$HERE"/gen/LTLAcc/*.lean "$HERE"/Proofs/*.lean; do
   fi
 done
 echo "  all sources valid"
+
+# ── Phase 0a: build hygiene ─────────────────────────────────────────────────
+# P0-a was applied to the four ed25519 repositories on 2026-07-30 and never
+# here — found on 2026-07-31 by the control repo's capability matrix, which
+# asks the property rather than looking for a phase by name.
+#
+# The finding that made it matter there applies verbatim: a verification that
+# never cleans up cannot distinguish "these proofs check" from "these proofs
+# check GIVEN WHATEVER IS LYING AROUND". Compiled artifacts are gitignored, so
+# no `git status` can show a reader that a verdict rested on an object from an
+# earlier run of a different script. Purge, and compile from source.
+#
+# This repository has no --audit-only mode, so there is no case in which the
+# artifacts must be kept: the purge is unconditional.
+echo "=== Phase 0a: build hygiene ==="
+find "$HERE" -name '*.olean' -delete 2>/dev/null || true
+find "$HERE" -name '*.ilean' -delete 2>/dev/null || true
+echo "  purged every compiled artifact — this run compiles from source"
 # Recursive: no compiled artifact anywhere in the tree may lack its source
 # (review round 2, GPT M1 — previously scanned Proofs/*.olean only).
 while IFS= read -r -d '' o; do
