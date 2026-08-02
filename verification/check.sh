@@ -165,6 +165,11 @@ HARNESS_EXTRA=(
   lean-toolchain            # which Lean the corpus claims to have been checked by
   fidelity/lean_defs.py     # the Python transcription the differential compares
   fidelity/run_fidelity.py  # the differential itself
+  PACTA-PIN.sha256          # WHICH pacta the differential is entitled to compare
+                            # against. Pinned here because it is not executable
+                            # and would otherwise sit outside the harness set —
+                            # a subject pin an attacker may rewrite pins nothing,
+                            # the same shape as a forgeable .audit-basis.
   Proofs/Inventory.lean     # audit driver: emits the inventory AND the statements
   Proofs/AxiomCheck.lean    # audit driver: the #print axioms queries of Phase 3
 )
@@ -599,18 +604,61 @@ FIDELITY_RAN=0
 if [ "${SKIP_FIDELITY:-0}" = "1" ]; then
   echo "  skipped (SKIP_FIDELITY=1)"
 elif [ -d "$PACTA_SRC/pacta" ]; then
+  # PIN THE SUBJECT BEFORE COMPARING AGAINST IT (round-8 review, GPT-5.6,
+  # register key `pacta-subject-unpinned`). This phase used to import whatever
+  # sat at $PACTA_SRC: no repository, no commit, no clean state, no hashes. It
+  # pinned the fidelity OUTPUTS while leaving the SUBJECT anonymous, so any
+  # program producing the same finite family of answers passed and the recorded
+  # result named no version of the thing it agreed with. Agreement with an
+  # unnamed program is not evidence about a deployed one.
+  PACTA_SRC="$PACTA_SRC" python3 "$HERE/fidelity/pacta_pin.py" --verify \
+    || { echo "FIDELITY FAILED — the pacta subject is not the pinned one."; exit 1; }
   PACTA_SRC="$PACTA_SRC" python3 "$HERE/fidelity/run_fidelity.py" || { echo "FIDELITY FAILED"; exit 1; }
   FIDELITY_RAN=1
 else
   echo "  SKIPPED: pacta repo not found at $PACTA_SRC (set PACTA_SRC to run)"
 fi
 
-# Fail-closed markers (review H2): the Lean corpus is green either way, but
-# only the strong marker — required by the attestation gate — is emitted
-# when fidelity actually ran. Never conflate the two.
+# Fail-closed markers AND A FAIL-CLOSED EXIT CODE (round-7 review: raised
+# independently by both reviewers — Claude F1, GPT-5.6 F10; register key
+# `acc-exit0-fidelity`).
+#
+# Until now this emitted the weak marker and RETURNED 0. The marker discipline
+# was right and the exit code contradicted it: a caller doing the obvious thing
+#
+#     ./check.sh && append
+#
+# read success from a run whose own last line says NOT attestation-ready. And
+# because pacta is not part of this estate, the skip branch is the ONLY branch
+# any third party ever takes — so for everyone but the author, the button
+# always returned 0 without ever checking definition fidelity. A procedure of
+# the form "run the button, then append" was unsound for this component.
+#
+# An exit code is what programs read. If the button cannot establish
+# attestation-readiness it must not return success, whatever it prints.
+#
+#   fidelity ran          -> ATTESTATION GREEN, exit 0
+#   SKIP_FIDELITY=1       -> exit 3: the caller opted out EXPLICITLY, so the
+#                            code is distinguishable, but it is not 0
+#   pacta absent          -> exit 1: nobody opted out; this is a real failure
+#                            to establish the property the button exists for
+#
+# The self-tests are unaffected: every SKIP_FIDELITY=1 case already expects a
+# non-zero exit and asserts on a diagnostic from an earlier phase, and the
+# control case compiles modules directly rather than invoking this script.
 echo "=== LEAN GREEN ==="
 if [ "$FIDELITY_RAN" = 1 ]; then
   echo "=== ATTESTATION GREEN (Lean + fidelity) ==="
+elif [ "${SKIP_FIDELITY:-0}" = "1" ]; then
+  echo "=== FIDELITY SKIPPED ON REQUEST — NOT attestation-ready (exit 3) ==="
+  echo "    The Lean corpus is green. Definition fidelity against the deployed"
+  echo "    verifier was not checked, so this run does NOT certify that this"
+  echo "    repository may be attested."
+  exit 3
 else
-  echo "=== FIDELITY NOT RUN — NOT attestation-ready (run with pacta present) ==="
+  echo "=== FIDELITY NOT RUN — NOT attestation-ready (exit 1) ==="
+  echo "    pacta was not found at: $PACTA_SRC"
+  echo "    Set PACTA_SRC to a pacta checkout and re-run, or pass"
+  echo "    SKIP_FIDELITY=1 to acknowledge deliberately skipping it (exit 3)."
+  exit 1
 fi

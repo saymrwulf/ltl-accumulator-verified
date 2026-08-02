@@ -1,0 +1,8 @@
+# pacta subject pinned by fidelity/pacta_pin.py --write
+# commit cd3b1bc92198f74b430b8fbd99c1ede1deb22988
+# 5 module(s), discovered by import, not by glob
+a1bcc5d700071f531e6fe16989884412cb3fb0f2702adfdf5212d4bc84eba2bc  pacta/__init__.py
+31dd6ab7b3121a433c7c8b082ec2d011d1958782470481137db0513a9822532d  pacta/postquantum.py
+4dc1e5ae52519dea989460abe8296a3ea93cd177673a01dc22a8efc71311af56  pacta/signing.py
+067332363d1014577619b958adeffb7ee168759855f21fd35f639b473cc7d511  pacta/transparency.py
+7130d5a770db7af4d294389625cf5f0c4228ed562b78bd7ca148ca010087d834  pacta/yamlio.py
