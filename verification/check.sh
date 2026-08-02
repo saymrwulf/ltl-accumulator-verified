@@ -300,6 +300,124 @@ lake env bash -c "
 " > "$INVLOG" 2>&1 || { cat "$INVLOG"; echo "INVENTORY COMPILE FAILED"; exit 1; }
 "$HERE/inventory_gate.sh" "$INVLOG" "$HERE/inventory-allowlist.txt" || COVFAIL=1
 
+# ── Phase 3b-kernel: kernel-side axiom-declaration gate ─────────────────────
+# PORTED FROM THE ed25519 FORKS after round-7 review (Claude, finding F2).
+#
+# What this repository had: a SOURCE-TEXT axiom grep in Phase 1, and an
+# environment walk in Phase 3b that runs inside Inventory.lean. Both have the
+# same blind spot from opposite directions. The grep misses ` axiom c : ...`
+# with a leading space — this repo's own selftest_audit.sh case 12 exploits
+# exactly that. And the environment walk is an `#eval`: a declaration placed
+# AFTER it in the same file exists in the compiled object file but not in the
+# environment when the walk runs, so the button reported "no axiom, no claim"
+# over a claim that was sitting in the environment, with the statement digest
+# byte-identical. A reviewer demonstrated it.
+#
+# The fix is the one the forks already carry: ask the KERNEL, by reading every
+# compiled object file directly. readModuleData sees what was actually stored,
+# regardless of indentation, attributes, privacy, or where in the file a
+# declaration sits relative to any #eval. Membership self-derives from the
+# manifest, so a new module cannot escape by being unlisted, and the module
+# count must match so a deleted .olean cannot make the scan vacuous.
+# PLACEMENT. This deliberately runs INSIDE Phase 3b rather than beside the
+# compile phase, unlike the ed25519 forks. There the audit drivers are members
+# of the compile manifest, so they exist by the time the kernel gate runs. Here
+# they are not: AxiomCheck is compiled by Phase 3 and Inventory by Phase 3b, so
+# an earlier gate would fail on a missing artifact — which it did, correctly,
+# when this was first ported. It must run after both drivers exist, because the
+# instruments are exactly what it has to see.
+echo "=== Phase 3b-kernel: kernel-side axiom-declaration gate ==="
+KERNLOG=$(mktemp /tmp/acc-kernel-XXXX.log)
+AXGATE=$(mktemp "$HERE/.axgate-XXXX.lean")
+ALL_MODULES=$(printf '"%s.olean", ' "${PROOFS[@]}" "${DRIVERS[@]}" | sed 's/, $//')
+cat > "$AXGATE" <<LEANGATE
+import Lean
+open Lean System
+#eval show CoreM Unit from do
+  let dir : FilePath := "$HERE/Proofs"
+  let expected : List String := [$ALL_MODULES]
+  let mut errs : Array String := #[]
+  let mut nConst := 0
+  let mut nMod := 0
+  let mut seen : Std.HashSet Name := {}
+  for name in expected do
+    let p := dir / name
+    -- FAIL CLOSED ON ABSENCE: a missing artifact would make this scan vacuous
+    -- for that module, so it is an error and never a skip.
+    unless (← p.pathExists) do
+      throwError "MISSING ARTIFACT: {p} — the kernel gate would be vacuous for it"
+    let (mod, _) ← readModuleData p
+    nMod := nMod + 1
+    for ci in mod.constants do
+      nConst := nConst + 1
+      seen := seen.insert ci.name
+      if ci matches .axiomInfo _ then
+        errs := errs.push s!"  {name}: {ci.name}"
+  unless errs.isEmpty do
+    throwError "AXIOM DECLARED under Proofs/ (kernel-side gate):\n{String.intercalate "\n" errs.toList}"
+  logInfo s!"  kernel confirms: {nConst} declarations across {nMod} compiled modules, none is an axiom"
+  for n in seen do IO.println s!"KERNEL-NAME|{n}"
+LEANGATE
+cd "$AENEAS_LEAN"
+AXGATE_RC=0
+lake env bash -c "
+  set -euo pipefail
+  cd '$HERE/gen' && export LEAN_PATH=\"\$LEAN_PATH:\$PWD:$HERE\"
+  cd '$HERE'
+  LEAN_TIMEOUT=$TIMEOUT LEAN_MAX_CORES=$CORES '$HERE/lean-guard' '$AXGATE'
+" 2>&1 | tee "$KERNLOG" || AXGATE_RC=${PIPESTATUS[0]}
+cd "$HERE"
+rm -f "$AXGATE" "${AXGATE%.lean}.olean"
+if [ "$AXGATE_RC" -ne 0 ]; then
+  echo "AXIOM SMUGGLING GATE FAILED (kernel-side) — see the error above."
+  rm -f "$KERNLOG" "$INVLOG"; exit 1
+fi
+echo ""
+
+# ── THE ACCOUNTING IDENTITY ─────────────────────────────────────────────────
+# Ported from the ed25519 forks, and the reason it is here is a demonstrated
+# attack, not symmetry. A reviewer appended to Proofs/Inventory.lean, AFTER the
+# `#eval` that performs the driver walk:
+#
+#     def bait : Nat := 0
+#     theorem bait.smuggled : ... := ...
+#
+# re-pinned, and ran the button. It printed "no axiom, no claim", the statement
+# digest was byte-identical to the clean tree, and the run went green — while a
+# theorem with a real axiom cone sat in the compiled environment. It was in
+# neither walk: not corpus, because an instrument is not corpus; not driver
+# surface, because it post-dates the emitter that reports the driver surface.
+#
+# The two walks read ENVIRONMENTS. Phase 2b reads OBJECT FILES. What a walk
+# cannot see because of where it sits in a file, the object file still holds.
+# So the property enforced here is containment, and it is what closes the hole:
+#
+#     every constant the kernel sees  ⊆  corpus inventory ∪ instrument surface
+#
+# Compared as SETS, deliberately. Counts cannot express this relation: an
+# object file may hold two physical copies of one lazily-materialised equation
+# lemma, while an environment holds one constant per name — arithmetic between
+# those views misled the ed25519 version of this check twice before it was
+# stated as containment.
+KERN_NAMES=$(mktemp /tmp/acc-kernnames-XXXX.txt)
+ACCT_NAMES=$(mktemp /tmp/acc-acctnames-XXXX.txt)
+LC_ALL=C grep '^KERNEL-NAME|' "$KERNLOG" | cut -d'|' -f2 | LC_ALL=C sort -u > "$KERN_NAMES"
+{ LC_ALL=C awk -F'|' '/^INV\|/{print $2}' "$INVLOG"
+  LC_ALL=C grep '^DRV|' "$INVLOG" | cut -d'|' -f2
+} | LC_ALL=C sort -u > "$ACCT_NAMES"
+UNACCOUNTED=$(LC_ALL=C comm -23 "$KERN_NAMES" "$ACCT_NAMES")
+if [ ! -s "$KERN_NAMES" ]; then
+  echo "  ACCOUNTING FAILED: Phase 2b reported no constant names — the scan was vacuous"
+  COVFAIL=1
+elif [ -n "$UNACCOUNTED" ]; then
+  echo "  ACCOUNTING FAILED: the kernel holds constants that neither walk accounts for:"
+  printf '%s\n' "$UNACCOUNTED" | head -20 | sed 's/^/    /'
+  COVFAIL=1
+else
+  echo "  accounting: every one of $(wc -l < "$KERN_NAMES") kernel constants is covered by the corpus inventory or the instrument surface"
+fi
+rm -f "$KERN_NAMES" "$ACCT_NAMES" "$KERNLOG"
+
 # The inventory's corpus-module list must BE the compile manifest — both
 # directions, so neither can drift from the other silently.
 # Read the module LISTS, not the file. This comparison used to grep the whole

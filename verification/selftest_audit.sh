@@ -248,6 +248,55 @@ grep -q "DRIVER SURFACE VIOLATION" "$T/check13.out" || {
 echo "  ✓ case 13 standalone claim in the axiom-check driver: DRIVER SURFACE VIOLATION"
 cp "$SRC/Proofs/AxiomCheck.lean" "$T/Proofs/AxiomCheck.lean"
 
+# Case 13 restores Proofs/AxiomCheck.lean but not its PIN, which it rewrote to
+# match the tampered file. Harmless while 13 was last; case 14 runs check.sh and
+# would die in Phase 0c on that stale pin. Re-pin here rather than in case 13,
+# so that case keeps testing exactly what it tested before. (Second instance of
+# this residue pattern in this file — see the note above case 10.)
+( cd "$T" && grep -v ' Proofs/AxiomCheck.lean$' HARNESS.sha256 > .h \
+  && sha256sum Proofs/AxiomCheck.lean >> .h && sort -k2 -o .h .h && mv .h HARNESS.sha256 )
+
+# 14 — A DECLARATION THAT POST-DATES THE WALK THAT REPORTS IT.
+#      Round-7 review (Claude, finding F2), reproduced verbatim. The driver
+#      surface is reported by an `#eval` inside Proofs/Inventory.lean.
+#      Anything declared AFTER that command exists in the compiled object file
+#      but not in the environment while the command runs, so the walk cannot
+#      see it. Before Phase 3b-kernel existed this went GREEN: the button
+#      printed "no axiom, no claim", the statement digest was byte-identical
+#      to the clean tree, and a theorem with a real axiom cone sat in the
+#      environment — in neither walk, in no allowlist, pinned by nothing.
+#
+#      The kernel reads OBJECT FILES, so it sees what an environment walk
+#      placed mid-file cannot. That is the whole point of the containment
+#      check, and this case is the reason it exists.
+#      NOTE ON THE PAYLOAD. `theorem bait.smuggled : True := trivial` does NOT
+#      work here, and the reason is worth keeping: Phase 1's stub audit greps
+#      for `: True :=` and catches it first. That is real defence in depth, but
+#      it means the naive payload never reaches the gate under test. The one
+#      below is the reviewer's original — a genuine claim with a real cone,
+#      invisible to every source-text check — so this case exercises the
+#      accounting identity and nothing else.
+cat >> "$T/Proofs/Inventory.lean" <<'BAIT'
+
+def bait : Nat := 0
+theorem bait.smuggled : ∀ n : Nat, n + 0 = n := by
+  have _h := Classical.em True
+  intro n; simp
+BAIT
+( cd "$T" && grep -v ' Proofs/Inventory.lean$' HARNESS.sha256 > .h \
+  && sha256sum Proofs/Inventory.lean >> .h && sort -k2 -o .h .h && mv .h HARNESS.sha256 )
+if SKIP_FIDELITY=1 "$T/check.sh" > "$T/check14.out" 2>&1; then
+  echo "  ✗ case 14: check.sh PASSED with a declaration appended after the driver walk"; exit 1
+fi
+grep -q "ACCOUNTING FAILED" "$T/check14.out" \
+  && grep -q "bait" "$T/check14.out" || {
+  echo "  ✗ case 14: failed, but not with the accounting diagnosis naming the declaration"
+  tail -8 "$T/check14.out"; exit 1; }
+echo "  ✓ case 14 declaration after the driver walk: ACCOUNTING FAILED names it"
+cp "$SRC/Proofs/Inventory.lean" "$T/Proofs/Inventory.lean"
+( cd "$T" && grep -v ' Proofs/Inventory.lean$' HARNESS.sha256 > .h \
+  && sha256sum Proofs/Inventory.lean >> .h && sort -k2 -o .h .h && mv .h HARNESS.sha256 )
+
 rm -rf "$WORK"
 trap - ERR
-echo "=== SELF-TEST GREEN: 14 attack cases defeated + positive control ==="
+echo "=== SELF-TEST GREEN: 15 attack cases defeated + positive control ==="
