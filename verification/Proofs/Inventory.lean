@@ -215,7 +215,25 @@ def ppAll (e : Expr) : MetaM String := do
                   the audit infrastructure. An instrument may declare definitions \
                   and whatever the elaborator generates for them — never a claim \
                   of its own, which no certificate covers and no allowlist pins."
-    drv := drv.push s!"DRV|{n}|{k}"
+    -- THE CONE. Round-8 review (Claude, `drv-surface-no-cones`,
+    -- `accounting-certifies-enumeration`): these rows carried name and kind
+    -- only, so when the accounting identity proved every kernel constant was
+    -- ENUMERATED, a claim planted in an instrument satisfied it and was then
+    -- examined by nothing. The reviewer's payload was exactly
+    --     DRV|LTLAccAudit.bait.smuggled|theorem
+    -- with cone [propext, Classical.choice, Quot.sound] — admitted, counted,
+    -- and covered by no allowlist row, no statement digest and no cone check.
+    -- Their verdict: the identity "converted 36 declarations nobody enumerated
+    -- into 36 declarations nobody examined."
+    --
+    -- With the cone here and the rows pinned in driver-allowlist.txt by the
+    -- same gate the corpus uses, the identity and the audit coincide. The
+    -- name-prefix rule above stays as a readable first check but is no longer
+    -- load-bearing: the reviewer showed it breaks in one line, and membership
+    -- in a committed allowlist does not.
+    let drvCone := axiomCone env n
+    let drvConeStr := ",".intercalate (drvCone.toList.map (·.toString))
+    drv := drv.push s!"DRV|{env.mainModule}|{n}|{k}|{drvConeStr}"
   let drvSorted := drv.qsort (· < ·)
   for l in drvSorted do
     IO.println l

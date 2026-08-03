@@ -165,6 +165,10 @@ HARNESS_EXTRA=(
   lean-toolchain            # which Lean the corpus claims to have been checked by
   fidelity/lean_defs.py     # the Python transcription the differential compares
   fidelity/run_fidelity.py  # the differential itself
+  driver-allowlist.txt      # the INSTRUMENTS' own declaration surface, with cones.
+                            # Not executable, so it would otherwise sit outside the
+                            # harness set — and an allowlist an attacker may rewrite
+                            # pins nothing, the same shape as a forgeable .audit-basis.
   PACTA-PIN.sha256          # WHICH pacta the differential is entitled to compare
                             # against. Pinned here because it is not executable
                             # and would otherwise sit outside the harness set —
@@ -408,7 +412,7 @@ KERN_NAMES=$(mktemp /tmp/acc-kernnames-XXXX.txt)
 ACCT_NAMES=$(mktemp /tmp/acc-acctnames-XXXX.txt)
 LC_ALL=C grep '^KERNEL-NAME|' "$KERNLOG" | cut -d'|' -f2 | LC_ALL=C sort -u > "$KERN_NAMES"
 { LC_ALL=C awk -F'|' '/^INV\|/{print $2}' "$INVLOG"
-  LC_ALL=C grep '^DRV|' "$INVLOG" | cut -d'|' -f2
+  LC_ALL=C grep '^DRV|' "$INVLOG" | cut -d'|' -f3
 } | LC_ALL=C sort -u > "$ACCT_NAMES"
 UNACCOUNTED=$(LC_ALL=C comm -23 "$KERN_NAMES" "$ACCT_NAMES")
 if [ ! -s "$KERN_NAMES" ]; then
@@ -467,13 +471,32 @@ elif [ "$NDRV" -eq 0 ]; then
 else
   echo "  driver surface: $NDRV declarations across the audit instruments, no axiom, no claim"
 fi
-# NOTE ON WHAT THIS DOES NOT DO. It does not pin WHICH definitions the
-# instruments declare — a new inert `def` in a driver is allowed. That is
-# deliberate: both drivers are byte-pinned in HARNESS.sha256 (Phase 0c), so
-# their contents cannot drift unnoticed, and a second policy file listing their
-# internals would add a thing to maintain without adding a thing to catch. What
-# the check above adds is the property byte-pinning cannot give: that no
-# instrument declares an AXIOM or a CLAIM, whatever its bytes are.
+# AND THE ROWS ARE PINNED, WITH THEIR CONES, BY THE SAME GATE THE CORPUS USES.
+#
+# This block used to end with a note explaining why the instruments' internals
+# were deliberately NOT pinned: they are byte-pinned in HARNESS.sha256, so "a
+# second policy file listing their internals would add a thing to maintain
+# without adding a thing to catch."
+#
+# Round-8 review (Claude, register keys `drv-surface-no-cones`,
+# `accounting-certifies-enumeration`) showed that reasoning was wrong, by
+# demonstration. Their payload
+#     DRV|LTLAccAudit.bait.smuggled|theorem
+# is a genuine claim with cone [propext, Classical.choice, Quot.sound]. It
+# passed the name-prefix rule above — `bait` is declared alongside it, so it
+# looks like an elaborator artefact — it was enumerated by the accounting
+# identity, and then NOTHING examined it: the rows carried no cone, no
+# allowlist covered them, and the statement digest does not reach instruments.
+# Byte-pinning shows that a driver CHANGED. It does not show what appeared in
+# it or what that thing rests on, and "the file changed" is not a finding a
+# reader can act on.
+#
+# So the rows now carry their cone and are diffed against a committed
+# allowlist, in both directions, by inventory_gate.sh with the DRV tag — the
+# same implementation, so the two surfaces cannot drift apart in their gating.
+# The axiom policy differs by surface and is enforced per surface: the corpus
+# admits exactly the sanctioned hash boundary, the instruments admit none.
+"$HERE/inventory_gate.sh" "$INVLOG" "$HERE/driver-allowlist.txt" DRV || COVFAIL=1
 
 # CONES ⊆ allowlist with IDENTICAL cones: the #print-axioms-pinned table
 # and the environment inventory are two independent computations of the
