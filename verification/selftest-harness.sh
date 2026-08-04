@@ -40,7 +40,7 @@ cp "$HERE/HARNESS.sha256" "$STASH/HARNESS.sha256"
 # either terminator rather than hardcoding one and silently lifting nothing.
 DRIVER="$STASH/phase0c.sh"
 {
-  echo 'set -uo pipefail'
+  echo 'set -euo pipefail'  # -e matches the button; see lift-drivers-drop-errexit
   echo "HERE=\"$HERE\""
   awk '/^# ── Phase 0c/{f=1} f{print} /^# ── Phase 1|^echo "=== Phase 1/{if(f && !/Phase 0c/) exit}' "$HERE/check.sh" \
     | sed '/^# ── Phase 1/d; /^echo "=== Phase 1/d'

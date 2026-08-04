@@ -48,7 +48,7 @@ cp "$T/AUDIT-MANIFEST.txt"   "$T/MANIFEST.pristine"
 # two variables it reads from its surroundings.
 DRIVER="$T/phase3d.sh"
 {
-  echo 'set -uo pipefail'
+  echo 'set -euo pipefail'  # -e matches the button; see lift-drivers-drop-errexit
   echo "HERE=\"$T\""
   echo 'INVLOG="$1"'
   sed -n '/^# -- Phase 3d/,/^# -- Phase 4/p' "$SRC/check.sh" | sed '$d'
