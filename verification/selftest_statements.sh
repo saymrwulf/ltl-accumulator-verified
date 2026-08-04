@@ -46,18 +46,26 @@ cp "$T/AUDIT-MANIFEST.txt"   "$T/MANIFEST.pristine"
 
 # Phase 3d, lifted verbatim from the shipping button. HERE and INVLOG are the
 # two variables it reads from its surroundings.
+# Payload to its own file before the driver is assembled: the size check must
+# measure what was LIFTED, not the lift plus its bindings, and lift-guard needs
+# the two apart to separate what the phase READS from what the driver DEFINES.
 DRIVER="$T/phase3d.sh"
+PAYLOAD="$T/payload3d.sh"
+sed -n '/^# -- Phase 3d/,/^# -- Phase 4/p' "$SRC/check.sh" | sed '$d' > "$PAYLOAD"
 {
   echo 'set -euo pipefail'  # -e matches the button; see lift-drivers-drop-errexit
   echo "HERE=\"$T\""
   echo 'INVLOG="$1"'
-  sed -n '/^# -- Phase 3d/,/^# -- Phase 4/p' "$SRC/check.sh" | sed '$d'
+  cat "$PAYLOAD"
 } > "$DRIVER"
-if [ "$(wc -l < "$DRIVER")" -lt 40 ]; then
+if [ "$(wc -l < "$PAYLOAD")" -lt 40 ]; then
   echo "FATAL: could not lift Phase 3d out of check.sh — the phase markers moved."
   echo "This self-test must attack the shipping gate; refusing to run against nothing."
   exit 1
 fi
+# Guarded by the SHIPPING guard in $SRC, not the copy inside the scratch tree:
+# a test that vets itself with its own copy of the instrument proves less.
+"$SRC/lift-guard.sh" "$PAYLOAD" "$DRIVER" "check.sh Phase 3d" || exit 1
 
 # Recompile the edited leaf module + the inventory into $T/inv.out.
 build_inventory() {

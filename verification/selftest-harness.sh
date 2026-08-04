@@ -38,18 +38,29 @@ cp "$HERE/HARNESS.sha256" "$STASH/HARNESS.sha256"
 
 # Lift Phase 0c. The two repo families end the phase differently, so accept
 # either terminator rather than hardcoding one and silently lifting nothing.
+# The payload is written to its OWN file before the driver is assembled, for two
+# reasons that both bit this repository. The size sanity check below has to
+# measure what was LIFTED; measured on the concatenated driver it counts the
+# prepended bindings too, so a lift that recovered almost nothing still clears
+# the threshold (round-7 lift-guard-payload-assert, closed in the four forks
+# with "all six lift sites" — six counted the forks, and these two accumulator
+# lifts were never in that count). And lift-guard needs payload and driver
+# separately to tell what the phase READS from what the driver DEFINES.
 DRIVER="$STASH/phase0c.sh"
+PAYLOAD="$STASH/payload.sh"
+awk '/^# ── Phase 0c/{f=1} f{print} /^# ── Phase 1|^echo "=== Phase 1/{if(f && !/Phase 0c/) exit}' "$HERE/check.sh" \
+  | sed '/^# ── Phase 1/d; /^echo "=== Phase 1/d' > "$PAYLOAD"
 {
   echo 'set -euo pipefail'  # -e matches the button; see lift-drivers-drop-errexit
   echo "HERE=\"$HERE\""
-  awk '/^# ── Phase 0c/{f=1} f{print} /^# ── Phase 1|^echo "=== Phase 1/{if(f && !/Phase 0c/) exit}' "$HERE/check.sh" \
-    | sed '/^# ── Phase 1/d; /^echo "=== Phase 1/d'
+  cat "$PAYLOAD"
 } > "$DRIVER"
-if [ "$(grep -c . "$DRIVER")" -lt 20 ]; then
+if [ "$(grep -c . "$PAYLOAD")" -lt 20 ]; then
   echo "FATAL: could not lift Phase 0c out of check.sh — the phase markers moved."
   echo "This self-test must attack the shipping gate; refusing to run against nothing."
   exit 1
 fi
+"$HERE/lift-guard.sh" "$PAYLOAD" "$DRIVER" "check.sh Phase 0c" || exit 1
 
 expect() {  # expect <label> <want-rc> <want-substring>
   local label="$1" want_rc="$2" want_txt="$3" out rc
