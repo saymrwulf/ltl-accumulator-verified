@@ -348,7 +348,7 @@ open Lean System
   let mut errs : Array String := #[]
   let mut nConst := 0
   let mut nMod := 0
-  let mut seen : Std.HashSet Name := {}
+  let mut seen : Std.HashSet (String × Name) := {}
   for name in expected do
     let p := dir / name
     -- FAIL CLOSED ON ABSENCE: a missing artifact would make this scan vacuous
@@ -359,13 +359,13 @@ open Lean System
     nMod := nMod + 1
     for ci in mod.constants do
       nConst := nConst + 1
-      seen := seen.insert ci.name
+      seen := seen.insert ("Proofs." ++ (name.dropRight 6), ci.name)
       if ci matches .axiomInfo _ then
         errs := errs.push s!"  {name}: {ci.name}"
   unless errs.isEmpty do
     throwError "AXIOM DECLARED under Proofs/ (kernel-side gate):\n{String.intercalate "\n" errs.toList}"
   logInfo s!"  kernel confirms: {nConst} declarations across {nMod} compiled modules, none is an axiom"
-  for n in seen do IO.println s!"KERNEL-NAME|{n}"
+  for (m, n) in seen do IO.println s!"KERNEL-NAME|{m}|{n}"
 LEANGATE
 cd "$AENEAS_LEAN"
 AXGATE_RC=0
@@ -410,10 +410,60 @@ echo ""
 # stated as containment.
 KERN_NAMES=$(mktemp /tmp/acc-kernnames-XXXX.txt)
 ACCT_NAMES=$(mktemp /tmp/acc-acctnames-XXXX.txt)
-LC_ALL=C grep '^KERNEL-NAME|' "$KERNLOG" | cut -d'|' -f2 | LC_ALL=C sort -u > "$KERN_NAMES"
+LC_ALL=C grep '^KERNEL-NAME|' "$KERNLOG" | cut -d'|' -f3 | LC_ALL=C sort -u > "$KERN_NAMES"
 { LC_ALL=C awk -F'|' '/^INV\|/{print $2}' "$INVLOG"
   LC_ALL=C grep '^DRV|' "$INVLOG" | cut -d'|' -f3
 } | LC_ALL=C sort -u > "$ACCT_NAMES"
+# TWO QUESTIONS, NOT ONE — round-9 review (Claude, N2), and the measurement
+# that answered it.
+#
+# The reviewer was right that keying this identity on NAME ALONE is weaker than
+# it reads: the allowlists are keyed module|name precisely because a name is not
+# unique, and this corpus holds two distinct CurveFieldProofs.zero_spec
+# declarations. So the pair is the right key — and keying on it revealed why the
+# straightforward fix is not available.
+#
+# 36 kernel pairs in this fork do not match a walk pair, and EVERY ONE of them
+# has its name accounted for under a DIFFERENT module. Example:
+#     kernel: Proofs.ConstSpecs|CurveFieldProofs.denote.eq_1
+#     kernel: Proofs.SubNegSpec|CurveFieldProofs.denote.eq_1   <- same name twice
+#     walk:   Proofs.SubNegSpec|CurveFieldProofs.denote.eq_1
+# That is GPT-5.6's round-7 F8: lazy equation lemmas are materialised PER
+# MODULE, so every module forcing an unfold gets its own copy in its object
+# file. The kernel reads object files and sees both copies; the environment walk
+# reads one merged environment and sees the name once. Both views are correct
+# about different things, so a pair mismatch here is not evidence of an
+# unexamined declaration, and suppressing it with an exception list would be the
+# fudge term four-fork data already refuted once.
+#
+# So the phase asks both questions and answers them separately:
+#   UNACCOUNTED   a name the kernel holds that NO walk mentions -> FAILS
+#   MULTI-MODULE  a pair that differs only in module attribution -> COUNTED and
+#                 REPORTED, never silently dropped, so the F8 phenomenon is
+#                 visible every run and a change in it is a change a reader sees
+KERN_PAIRS=$(mktemp /tmp/check-kernpairs-XXXX.txt)
+ACCT_PAIRS=$(mktemp /tmp/check-acctpairs-XXXX.txt)
+LC_ALL=C grep '^KERNEL-NAME|' "$KERNLOG" | cut -d'|' -f2,3 | LC_ALL=C sort -u > "$KERN_PAIRS"
+{ LC_ALL=C awk -F'|' '/^INV\|/{print $2"|"$3}' "$HERE/inventory-allowlist.txt"
+  LC_ALL=C grep '^DRV|' "$INVLOG" | cut -d'|' -f2,3
+} | LC_ALL=C sort -u > "$ACCT_PAIRS"
+# THIS COMPARISON IS NOT AVAILABLE HERE, and saying so beats printing a number.
+# The ed25519 repositories and fips205 use INV|module|name|kind|cone; THIS
+# repository uses INV|name|kind|cone — four fields, no module column. The tag is
+# the same and the record is not. Keying field 2 as a module here yields
+# `name|kind`, which matches nothing, and the first run of this port duly
+# reported 216 of 234 records as module-attribution differences. That number was
+# meaningless. A wrong number in a green banner is the failure this estate keeps
+# committing, so the check now tests its own applicability from the record shape
+# rather than assuming it from the tag.
+INV_FIELDS=$(LC_ALL=C grep -m1 '^INV|' "$HERE/inventory-allowlist.txt" | awk -F'|' '{print NF}')
+if [ "${INV_FIELDS:-0}" -ge 5 ]; then
+  MULTIMOD=$(LC_ALL=C comm -23 "$KERN_PAIRS" "$ACCT_PAIRS" | wc -l)
+  MULTIMOD_NOTE="$MULTIMOD kernel record(s) differ from a walk only in module attribution (lazy equation lemmas materialised per module — GPT-5.6 round-7 F8, reported not suppressed)"
+else
+  MULTIMOD=0
+  MULTIMOD_NOTE="not computed — this repository's INV rows carry no module column ($INV_FIELDS fields), so kernel and walk records cannot be compared as module|name pairs. Adding that column is the open follow-up; until then the identity here is name-keyed only, which is weaker (round-9 review, Claude N2)."
+fi
 UNACCOUNTED=$(LC_ALL=C comm -23 "$KERN_NAMES" "$ACCT_NAMES")
 if [ ! -s "$KERN_NAMES" ]; then
   echo "  ACCOUNTING FAILED: Phase 2b reported no constant names — the scan was vacuous"
@@ -423,7 +473,8 @@ elif [ -n "$UNACCOUNTED" ]; then
   printf '%s\n' "$UNACCOUNTED" | head -20 | sed 's/^/    /'
   COVFAIL=1
 else
-  echo "  accounting: every one of $(wc -l < "$KERN_NAMES") kernel constants is covered by the corpus inventory or the instrument surface"
+  echo "  accounting: every one of $(wc -l < "$KERN_NAMES") kernel constant names is covered by the corpus inventory or the instrument surface"
+  echo "  multi-module: $MULTIMOD_NOTE"
 fi
 rm -f "$KERN_NAMES" "$ACCT_NAMES" "$KERNLOG"
 
