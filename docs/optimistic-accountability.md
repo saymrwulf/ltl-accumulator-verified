@@ -145,8 +145,9 @@ rollup metaphor to be remarkable.
 
 - Mechanized statements: `STATEMENT-MAP.md` (this repo); the fraud-
   proof-generator reading of Theorem 3 is `extractCons_correct` +
-  `acceptCons_sound`; scope boundaries in `KNOWN-GAPS.md` (esp. gap 14:
-  the deployed-verifier side condition; gap 4: the signature layer,
+  `acceptCons_sound`; scope boundaries in `KNOWN-GAPS.md` (esp. gap 15:
+  the deployment refinement invariant — gap 14, the historical deployed-verifier
+  divergence, closed 2026-07-23; gap 4: the signature layer,
   where equivocation-evidence transferability lives).
 - Deployed anatomy: leaf → `entries/NNNNNN.json`; head →
   `latest-sth.json` (+ `sth-history.jsonl`); the head is signed by the

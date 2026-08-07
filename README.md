@@ -35,8 +35,10 @@ kernel-checked; the audit
 surface is defined and green (`verification/check.sh`, exit 0). See
 [STATEMENT-MAP.md](STATEMENT-MAP.md) for the paper↔Lean review surface and
 [KNOWN-GAPS.md](KNOWN-GAPS.md) for the honest scope ledger.
-Reviewed across **six** external adversarial rounds (GPT-5.6 + a second
-Claude; zero broken theorems in any round; both approved). The audit
+Reviewed across **six** external adversarial rounds through the entry-13
+freeze (GPT-5.6 + a second Claude; zero broken theorems in any round; both
+approved), plus the estate-wide rounds 7–9 whose accumulator findings are
+harvested in the private register and fixed here. The audit
 surface is an environment-derived inventory (`Proofs/Inventory.lean` +
 pinned allowlist — 222 constants, 61 human-reviewed cones, self-tested by
 `selftest_audit.sh`); the review kit is push-button reproducible
@@ -44,8 +46,10 @@ pinned allowlist — 222 constants, 61 human-reviewed cones, self-tested by
 `acceptIncl`/`acceptCons_sound` route the theorems through the named
 acceptance predicates; fidelity = agreement over pinned families
 (230,271 + 230,016 baseline; 73,573 lied-size boundary cases with
-3,867 expected one-sided divergences — KNOWN-GAPS gaps 14/15, not
-extensional equality). Doc counts are asserted by check.sh Phase 3c.
+**0 divergences since the sn==0 fix**, pacta `ddbb5a4`, 2026-07-23 — gap 14
+is CLOSED; the historical 3,867 one-sided divergence family is preserved at
+tag `vulnerable/sn0-consistency-fd2f6ba`. Still finite-family testing, not
+extensional equality — the open deployment boundary is gap 15). Doc counts are asserted by check.sh Phase 3c.
 How the append was done — release tuple, preflight, candidate-inspection
 gate, and the 12→13 structural rehearsal — is recorded in
 [ATTESTATION-RUNBOOK.md](ATTESTATION-RUNBOOK.md).

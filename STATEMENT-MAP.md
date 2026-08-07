@@ -29,11 +29,11 @@ This map is the review surface.
 | Lemma 2, whole-tree instance | `extractMTH` + `extractMTH_correct` | Descent | sha256 (+choice) |
 | Lemma 2, ConsRec instance (Thm 3 steps 1–2) | `consRecBinding` | Binding3 | sha256 (+choice) |
 | Theorem 2 (inclusion soundness, explicit 𝓔) | `extractIncl` + `extractIncl_correct` | Extract | sha256 (+choice) |
-| Theorem 3 (consistency soundness, explicit 𝓔′) | `extractCons` + `extractCons_correct`; `extractCons_correct_paper` at the paper's exact quantifiers (n₀=0 discharged); `acceptCons_sound` routes it through the named `acceptCons` predicate (size bound derived from acceptance via `consRec_some_le`). Covers the MECHANIZED accept set; transfer to the deployed verifier is conditional on the pinned-pair side condition of gap 14 | Theorem3 | sha256 (+choice) |
+| Theorem 3 (consistency soundness, explicit 𝓔′) | `extractCons` + `extractCons_correct`; `extractCons_correct_paper` at the paper's exact quantifiers (n₀=0 discharged); `acceptCons_sound` routes it through the named `acceptCons` predicate (size bound derived from acceptance via `consRec_some_le`). Covers the MECHANIZED accept set; transfer to the deployed verifier is conditional on the deployment refinement invariant of gap 15 (gap 14 closed 2026-07-23) | Theorem3 | sha256 (+choice) |
 | Prop 1(1) (pin monotonicity + prefix) | `pinAccept`, `pinAccept_monotone`, `pin_prefix_correct` | PinStore | sha256 (+choice) |
 | Prop 1(2), Merkle share | `fork_distinct` (different roots ⇒ different content); transferability = signature layer, out of scope | PinStore | sha256 |
 | non-vacuity guards (anti-pigeonhole) | `extractIncl_nonvacuous`, `extractMTH_nonvacuous`, `extractCons_nonvacuous`, `pin_prefix_nonvacuous` | Extract/Descent/Theorem3/PinStore | sha256 |
-| definition fidelity vs deployed verifier | `fidelity/` harness: MTH==merkle_root, Path==inclusion_proof, verifier agreement 230,271 inclusion + 230,016 consistency over the pinned case families — **not extensional equality**: the lied-size family (73,573 cases) pins the known one-sided divergence of gap 14 (3,867 expected, deployed-accepts-only, direction asserted) | fidelity | (testing) |
+| definition fidelity vs deployed verifier | `fidelity/` harness: MTH==merkle_root, Path==inclusion_proof, verifier agreement 230,271 inclusion + 230,016 consistency over the pinned case families — **not extensional equality**: the lied-size family (73,573 cases) pins **0 divergences** at the current subject (post-`ddbb5a4` pacta, see PACTA-PIN.sha256; gap 14 closed 2026-07-23 — the historical 3,867 one-sided family is recorded in its closure note) | fidelity | (testing) |
 
 Note on "assumption-free" (paper §10(i)): `incl_complete`'s cone lists
 `LTLAcc.sha256`, but the theorem assumes **no property** of it — it
@@ -66,7 +66,7 @@ cross-checked against the inventory's independently computed cones.
 asserted against the allowlist/CONES/harness by check.sh Phase 3c on
 every run — stale-count drift is now a red button, not an erratum:
 review R4-1, after three consecutive rounds of hand-edit failures.)
-`verification/selftest_audit.sh` attacks the gate with fourteen
+`verification/selftest_audit.sh` attacks the gate with fifteen
 injection cases (attributed/indented/private/instance declarations, a
 nested namespace reusing an audited basename, a smuggled axiom, a
 deleted declaration, and unmanifested Proofs/ and gen/ modules) — each
